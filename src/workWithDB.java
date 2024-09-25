@@ -2,13 +2,14 @@ import Interfaces.Iwork;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class workWithDB implements Iwork {
+    int time;
     ConcurrentHashMap<Object, Object> concurrentHashMap = new ConcurrentHashMap<>();
     /*
      * TO DO:
      * Добавить возможность пункта со временем, чтобы в дальнейшем удалять ключи (ttl)
      * */
     @Override
-    public void add(Object key, Object value) {
+    public void add(Object key, Object value, int time) {
         this.concurrentHashMap.put(key, value);
     }
 
