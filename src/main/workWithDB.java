@@ -1,8 +1,10 @@
+package main;
+
 import Interfaces.Iwork;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class workWithDB implements Iwork {
-    int time;
+    private int time;
     ConcurrentHashMap<Object, Object> concurrentHashMap = new ConcurrentHashMap<>();
     /*
      * TO DO:
@@ -29,12 +31,17 @@ public class workWithDB implements Iwork {
     }
 
     @Override
-    public void viewAll(){
-        System.out.println(concurrentHashMap);
+    public ConcurrentHashMap<Object, Object> viewAll(){
+        return concurrentHashMap;
     }
 
     @Override
-    public void viewKey(Object key) {
-        System.out.println(concurrentHashMap.get(key));
+    public String viewValueByKey(Object key) {
+        return concurrentHashMap.get(key).toString();
+    }
+
+    @Override
+    public int size(){
+        return concurrentHashMap.size();
     }
 }
