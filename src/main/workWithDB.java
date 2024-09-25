@@ -4,7 +4,7 @@ import Interfaces.Iwork;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class workWithDB implements Iwork {
-    private int time;
+    private int time = 0;
     ConcurrentHashMap<Object, Object> concurrentHashMap = new ConcurrentHashMap<>();
     /*
      * TO DO:
@@ -22,12 +22,15 @@ public class workWithDB implements Iwork {
 
     /*
     * TO DO:
-    * Если такого ключа нет в системе - добавить
     * Изменять время для ключа ttl
     * */
     @Override
     public void put(Object key, Object value) {
-        this.concurrentHashMap.put(key, value);
+        if (this.concurrentHashMap.get(key) == null){
+            this.concurrentHashMap.put(key, value);
+        } else {
+            this.concurrentHashMap.replace(key, value);
+        }
     }
 
     @Override
