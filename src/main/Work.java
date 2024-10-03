@@ -19,34 +19,13 @@ public class Work implements IWork<String, String> {
 
     @Override
     public void put(String key, String value) {
-        this.concurrentHashMap.put(key, value);
+        this.concurrentHashMap.replace(key, value);
     }
 
     @Override
     public String get(String key) {
         return this.concurrentHashMap.get(key);
     }
-
-//
-//    @Override
-//    public void put(Object key, Object value) {
-//        if (this.concurrentHashMap.get(key) == null){
-//            this.concurrentHashMap.put(key, value);
-//        } else {
-//            this.concurrentHashMap.replace(key, value);
-//        }
-////      Убрать replace
-//    }
-//
-//    @Override
-//    public ConcurrentHashMap<Object, Object> viewAll(){
-//        return concurrentHashMap;
-//    }
-//
-//    @Override
-//    public String viewValueByKey(Object key) {
-//        return concurrentHashMap.get(key).toString();
-//    }
 
     @Override
     public int size(){
