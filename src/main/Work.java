@@ -1,34 +1,35 @@
 package main;
 
 import Interfaces.IWork;
-import java.util.concurrent.ConcurrentHashMap;
+
+import java.util.*;
 
 public class Work implements IWork<String, String> {
-    private final ConcurrentHashMap<String, String> concurrentHashMap = new ConcurrentHashMap<>();
+    private final Map<String, String> mapData = new HashMap<>();
     private final int time = 0;
 
     @Override
     public void add(String key, String value, int time) {
-        this.concurrentHashMap.put(key, value);
+        this.mapData.put(key, value);
     }
 
     @Override
     public void delete(String key) {
-        this.concurrentHashMap.remove(key);
+        this.mapData.remove(key);
     }
 
     @Override
     public void put(String key, String value) {
-        this.concurrentHashMap.replace(key, value);
+        this.mapData.replace(key, value);
     }
 
     @Override
     public String get(String key) {
-        return this.concurrentHashMap.get(key);
+        return this.mapData.get(key);
     }
 
     @Override
     public int size(){
-        return concurrentHashMap.size();
+        return mapData.size();
     }
 }
