@@ -1,10 +1,10 @@
 package main;
 
-import Interfaces.IWork;
+import Interfaces.ITable;
 
 import java.util.*;
 
-public class Work implements IWork<String, String> {
+public class Table implements ITable<String, String> {
     private final Map<String, String> mapData = new HashMap<>();
     private final int time = 0;
 
