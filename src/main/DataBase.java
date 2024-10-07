@@ -5,20 +5,20 @@ import Interfaces.ITable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DataBase implements IDataBase<String, ITable<String, String>> {
-    private Map<String , ITable<String, String>> workMap;
+public class DataBase implements IDataBase {
+    private Map<String , ITable> workMap;
 
     public DataBase() {
-        this.workMap = new HashMap<String, ITable<String, String>>();
+        this.workMap = new HashMap<String, ITable>();
     }
 
     @Override
-    public void add(String key, ITable<String, String> value) {
+    public void add(String key, ITable value) {
         this.workMap.put(key, value);
     }
 
     @Override
-    public ITable<String, String> get(String key) {
+    public ITable get(String key) {
         return this.workMap.get(key);
     }
 
@@ -28,7 +28,7 @@ public class DataBase implements IDataBase<String, ITable<String, String>> {
     }
 
     @Override
-    public void put(String key, ITable<String, String> value) {
+    public void put(String key, ITable value) {
         this.workMap.replace(key, value);
     }
 }

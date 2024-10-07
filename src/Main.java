@@ -3,8 +3,6 @@ import Interfaces.ITable;
 import main.DataBase;
 import main.Table;
 
-import java.util.List;
-
 public class Main {
     public static void main(String[] args) {
         IDataBase dataBase = new DataBase();
