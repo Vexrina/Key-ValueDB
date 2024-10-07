@@ -4,7 +4,7 @@ import Interfaces.ITable;
 
 import java.util.*;
 
-public class Table implements ITable<String, String> {
+public class Table implements ITable {
     private final Map<String, String> mapData = new HashMap<>();
     private final int time = 0;
 
