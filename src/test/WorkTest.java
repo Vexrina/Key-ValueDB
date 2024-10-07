@@ -1,9 +1,9 @@
 package test;
 import static org.junit.jupiter.api.Assertions.*;
-import main.Work;
+import main.Table;
 
 class WorkTest {
-    Work db = new Work();
+    Table db = new Table();
     @org.junit.jupiter.api.Test
     void add() {
         db.add("1", "Hello, world", 1);

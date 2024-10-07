@@ -1,11 +1,16 @@
-import main.Work;
+import Interfaces.IDataBase;
+import Interfaces.ITable;
+import main.DataBase;
+import main.Table;
+
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        Work db = new Work();
-
-        db.add("1", "Hello, world!", 1);
-
-        System.out.println(db.viewAll());
+        IDataBase dataBase = new DataBase();
+        ITable table = new Table();
+        table.add("workKey", "workValue", 0);
+        dataBase.add("dataBaseKey", table);
+        System.out.println(dataBase.get("dataBaseKey").get("workKey"));
     }
 }

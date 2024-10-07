@@ -1,24 +1,24 @@
 package main;
 
 import Interfaces.IDataBase;
-import Interfaces.IWork;
+import Interfaces.ITable;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DataBase implements IDataBase<String, IWork<String, String>> {
-    private Map<String , IWork<String, String>> workMap;
+public class DataBase implements IDataBase<String, ITable<String, String>> {
+    private Map<String , ITable<String, String>> workMap;
 
     public DataBase() {
-        this.workMap = new HashMap<String, IWork<String, String>>();
+        this.workMap = new HashMap<String, ITable<String, String>>();
     }
 
     @Override
-    public void add(String key, IWork<String, String> value) {
+    public void add(String key, ITable<String, String> value) {
         this.workMap.put(key, value);
     }
 
     @Override
-    public IWork<String, String> get(String key) {
+    public ITable<String, String> get(String key) {
         return this.workMap.get(key);
     }
 
@@ -28,7 +28,7 @@ public class DataBase implements IDataBase<String, IWork<String, String>> {
     }
 
     @Override
-    public void put(String key, IWork<String, String> value) {
+    public void put(String key, ITable<String, String> value) {
         this.workMap.replace(key, value);
     }
 }
