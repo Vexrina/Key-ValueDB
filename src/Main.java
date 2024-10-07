@@ -1,11 +1,13 @@
+import main.DataBase;
 import main.Work;
 
 public class Main {
     public static void main(String[] args) {
-        Work db = new Work();
+        DataBase dataBase = new DataBase();
+        Work work = new Work();
+        work.add("workKey", "workValue", 0);
+        dataBase.add("dataBaseKey", work);
 
-        db.add("1", "Hello, world!", 1);
-
-        System.out.println(db.viewAll());
+        System.out.println(dataBase.get("dataBaseKey").get("workKey"));
     }
 }
