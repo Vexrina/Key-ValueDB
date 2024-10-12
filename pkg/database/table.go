@@ -16,6 +16,12 @@ type TableImpl struct {
 	Mu   sync.RWMutex
 }
 
+func NewTableImpl() *TableImpl {
+	return &TableImpl{
+		data: make(map[any]Value),
+	}
+}
+
 func (t *TableImpl) Add(key any, value Value) (bool, error) {
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
@@ -54,8 +60,8 @@ func (t *TableImpl) Put(key any, value Value) (bool, error) {
 }
 
 func (t *TableImpl) Get(key any) (Value, error) {
-	t.Mu.RLock()
-	defer t.Mu.RUnlock()
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
 
 	value, exists := t.data[key]
 	if !exists {
@@ -75,7 +81,7 @@ func (t *TableImpl) Get(key any) (Value, error) {
 }
 
 func (t *TableImpl) Size() int {
-	t.Mu.RLock()
-	defer t.Mu.RUnlock()
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
 	return len(t.data)
 }
