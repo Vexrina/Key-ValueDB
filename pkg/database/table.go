@@ -1,4 +1,4 @@
-package interfaces
+package database
 
 import (
 	"errors"
@@ -6,30 +6,22 @@ import (
 	"time"
 )
 
-type ITable interface {
-	add(key interface{}, value Value) (bool, error)
-	delete(key interface{}) (bool, error)
-	put(key interface{}, value Value) (bool, error)
-	get(key interface{}) (Value, error)
-	size() int
-}
-
 type Value struct {
-	value interface{}
+	value any
 	ttl   time.Time
 }
 
-type Table struct {
-	data map[interface{}]Value
+type TableImpl struct {
+	data map[any]Value
 	Mu   sync.RWMutex
 }
 
-func (t *Table) add(key interface{}, value Value) (bool, error) {
+func (t *TableImpl) Add(key any, value Value) (bool, error) {
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 
 	if t.data == nil {
-		t.data = make(map[interface{}]Value)
+		t.data = make(map[any]Value)
 	}
 
 	if _, exists := t.data[key]; exists {
@@ -40,7 +32,7 @@ func (t *Table) add(key interface{}, value Value) (bool, error) {
 	return true, nil
 }
 
-func (t *Table) delete(key interface{}) (bool, error) {
+func (t *TableImpl) Delete(key any) (bool, error) {
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 	if _, exists := t.data[key]; !exists {
@@ -50,7 +42,7 @@ func (t *Table) delete(key interface{}) (bool, error) {
 	return true, nil
 }
 
-func (t *Table) put(key interface{}, value Value) (bool, error) {
+func (t *TableImpl) Put(key any, value Value) (bool, error) {
 	t.Mu.Lock()
 	defer t.Mu.Unlock()
 	if _, exists := t.data[key]; !exists {
@@ -61,7 +53,7 @@ func (t *Table) put(key interface{}, value Value) (bool, error) {
 	return true, nil
 }
 
-func (t *Table) get(key interface{}) (Value, error) {
+func (t *TableImpl) Get(key any) (Value, error) {
 	t.Mu.RLock()
 	defer t.Mu.RUnlock()
 
@@ -82,7 +74,7 @@ func (t *Table) get(key interface{}) (Value, error) {
 	return value, nil
 }
 
-func (t *Table) size() int {
+func (t *TableImpl) Size() int {
 	t.Mu.RLock()
 	defer t.Mu.RUnlock()
 	return len(t.data)
