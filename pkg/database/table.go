@@ -60,8 +60,8 @@ func (t *TableImpl) Put(key any, value Value) (bool, error) {
 }
 
 func (t *TableImpl) Get(key any) (Value, error) {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.Mu.RLock()
+	defer t.Mu.RUnlock()
 
 	value, exists := t.data[key]
 	if !exists {
