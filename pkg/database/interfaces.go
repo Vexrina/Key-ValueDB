@@ -1,15 +1,19 @@
 package database
 
+import "time"
+
 type DataBase interface {
-	Set(keyDB any, table Table) (bool, error)
-	Get(keyDB any) (Table, error)
-	Remove(keyDB any) (bool, error)
-	Put(keyDB any, table Table) (bool, error)
+	Create(keyDB any, table Table) (bool, error)
+	Select(keyDB any) (Table, error)
+	Delete(keyDB any) (bool, error)
+	Rename(keyDB any, table Table) (bool, error)
 }
 
 type Table interface {
-	Delete(key any) (bool, error)
-	Put(key any, value Value) (bool, error)
-	Get(key any) (Value, error)
+	Delete(keyTable any) (bool, error)
+	Insert(keyTable any, value Value) (bool, error)
+	Get(keyTable any) (Value, error)
+	Update(keyTable any, value Value) (bool, error)
 	Size() int
+	ParseTime(format string) (time.Time, error)
 }

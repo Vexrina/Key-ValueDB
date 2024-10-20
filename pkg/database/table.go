@@ -11,40 +11,48 @@ type Value struct {
 }
 
 type TableImpl struct {
-	data map[any]Value
+	dataTable map[any]Value
 }
 
 func NewTableImpl() *TableImpl {
 	return &TableImpl{
-		data: make(map[any]Value),
+		dataTable: make(map[any]Value),
 	}
 }
 
-func (t *TableImpl) Delete(key any) (bool, error) {
-	if _, exists := t.data[key]; !exists {
+func (t *TableImpl) Delete(keyTable any) (bool, error) {
+	if _, exists := t.dataTable[keyTable]; !exists {
 		return false, errors.New("Такого ключа не существует! Удаление невозможно")
 	}
-	delete(t.data, key)
+	delete(t.dataTable, keyTable)
 	return true, nil
 }
 
-func (t *TableImpl) Put(key any, value Value) (bool, error) {
-	if _, exists := t.data[key]; !exists {
+func (t *TableImpl) Insert(keyTable any, value Value) (bool, error) {
+	if _, exists := t.dataTable[keyTable]; exists {
+		return false, errors.New("Такой ключ существует! Добавление невозможно")
+	}
+
+	t.dataTable[keyTable] = value
+	return true, nil
+}
+func (t *TableImpl) Update(keyTable any, value Value) (bool, error) {
+	if _, exists := t.dataTable[keyTable]; !exists {
 		return false, errors.New("Такого ключа не существует! Редактирование невозможно")
 	}
 
-	t.data[key] = value
+	t.dataTable[keyTable] = value
 	return true, nil
 }
 
-func (t *TableImpl) Get(key any) (Value, error) {
-	value, exists := t.data[key]
+func (t *TableImpl) Get(keyTable any) (Value, error) {
+	value, exists := t.dataTable[keyTable]
 	if !exists {
 		return Value{}, errors.New("Ключа не существует!")
 	}
 
 	if time.Now().After(value.Ttl) {
-		delete(t.data, key)
+		delete(t.dataTable, keyTable)
 		return Value{}, errors.New("Ключ был удален")
 	}
 
@@ -52,5 +60,13 @@ func (t *TableImpl) Get(key any) (Value, error) {
 }
 
 func (t *TableImpl) Size() int {
-	return len(t.data)
+	return len(t.dataTable)
+}
+
+func (t *TableImpl) ParseTime(dateStr string) (time.Time, error) {
+	parsedTime, err := time.Parse("02.01.2006", dateStr)
+	if err != nil {
+		return time.Time{}, errors.New("Невозможно распарсить дату!")
+	}
+	return parsedTime, nil
 }
