@@ -2,17 +2,28 @@ package main
 
 import (
 	"BD/pkg/database"
+	"BD/pkg/parser"
+	"bufio"
 	"fmt"
-	"time"
+	"os"
 )
 
 func main() {
-	table := database.NewTableImpl()
-	value := database.Value{
-		"Hello, World!",
-		time.Now(),
-	}
-	table.Add(1, value)
+	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print(table.Size())
+	db := database.NewDataBaseImpl()
+	parser := parser.ParserImpl{
+		Databases: *db,
+	}
+	for {
+		fmt.Print("our db $ ")
+		cmd, _ := reader.ReadString('\n')
+
+		result, err := parser.Parse(cmd)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+		fmt.Println(result)
+	}
 }
