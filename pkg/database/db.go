@@ -25,7 +25,6 @@ func (db *DataBaseImpl) Set(keyDB any, table Table) (bool, error) {
 }
 
 func (db *DataBaseImpl) Get(keyDB any) (Table, error) {
-
 	table, exists := db.dataBase[keyDB]
 	if !exists {
 		return nil, errors.New("Таблица не найдена")
