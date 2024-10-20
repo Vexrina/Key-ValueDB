@@ -48,7 +48,7 @@ func (t *TableImpl) Update(keyTable any, value Value) (bool, error) {
 func (t *TableImpl) Get(keyTable any) (Value, error) {
 	value, exists := t.dataTable[keyTable]
 	if !exists {
-		return Value{}, errors.New("Ключа не существует!")
+		return Value{}, errors.New("Ключа не существует")
 	}
 
 	if time.Now().After(value.Ttl) {
