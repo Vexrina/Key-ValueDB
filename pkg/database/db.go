@@ -32,7 +32,7 @@ func (db *DataBaseImpl) Select(keyDB any) (Table, error) {
 	return table, nil
 }
 
-func (db *DataBaseImpl) Remove(keyDB any) (bool, error) {
+func (db *DataBaseImpl) Delete(keyDB any) (bool, error) {
 	if _, exists := db.dataBase[keyDB]; !exists {
 		return false, errors.New("Такой таблицы не существует")
 	}

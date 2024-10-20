@@ -6,7 +6,7 @@ type DataBase interface {
 	Create(keyDB any, table Table) (bool, error)
 	Select(keyDB any) (Table, error)
 	Delete(keyDB any) (bool, error)
-	Rename(keyDB any, table Table) (bool, error)
+	Rename(keyOld, keyNew any) (bool, error)
 }
 
 type Table interface {
