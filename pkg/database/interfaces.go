@@ -8,7 +8,6 @@ type DataBase interface {
 }
 
 type Table interface {
-	Add(key any, value Value) (bool, error)
 	Delete(key any) (bool, error)
 	Put(key any, value Value) (bool, error)
 	Get(key any) (Value, error)
