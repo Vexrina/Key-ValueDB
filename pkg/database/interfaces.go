@@ -15,5 +15,5 @@ type Table interface {
 	Get(keyTable any) (Value, error)
 	Update(keyTable any, value Value) (bool, error)
 	Size() int
-	ParseTime(format string) (time.Time, error)
+	parseTime(format string) (time.Time, error)
 }

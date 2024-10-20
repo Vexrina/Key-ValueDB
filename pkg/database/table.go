@@ -63,7 +63,7 @@ func (t *TableImpl) Size() int {
 	return len(t.dataTable)
 }
 
-func (t *TableImpl) ParseTime(dateStr string) (time.Time, error) {
+func (t *TableImpl) parseTime(dateStr string) (time.Time, error) {
 	parsedTime, err := time.Parse("02.01.2006", dateStr)
 	if err != nil {
 		return time.Time{}, errors.New("Невозможно распарсить дату!")
