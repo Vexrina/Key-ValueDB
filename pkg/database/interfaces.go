@@ -7,6 +7,7 @@ type DataBase interface {
 	Select(keyDB any) (Table, error)
 	Delete(keyDB any) (bool, error)
 	Rename(keyOld, keyNew any) (bool, error)
+	SelectAll() (map[any]Table, error)
 }
 
 type Table interface {

@@ -59,3 +59,11 @@ func (db *DataBaseImpl) Rename(keyOld, keyNew any) (bool, error) {
 
 	return true, nil
 }
+
+func (db *DataBaseImpl) SelectAll() (map[any]Table, error) {
+	if len(db.dataBase) == 0 {
+		return nil, errors.New("нет данных")
+	}
+
+	return db.dataBase, nil
+}
