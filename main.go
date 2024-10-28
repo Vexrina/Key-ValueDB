@@ -2,6 +2,7 @@ package main
 
 import (
 	"BD/pkg/database"
+	"BD/pkg/http"
 	"BD/pkg/parser"
 	"bufio"
 	"fmt"
@@ -15,6 +16,8 @@ func main() {
 	parser := parser.ParserImpl{
 		Databases: *db,
 	}
+
+	go http.Run(make(map[string]database.DataBaseImpl), "8080")
 	for {
 		fmt.Print("our db $ ")
 		cmd, _ := reader.ReadString('\n')
