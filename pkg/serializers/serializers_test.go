@@ -27,18 +27,18 @@ func TestSerialize_BasicTypes(t *testing.T) {
 			expectedResult: []byte{0x0},
 		},
 		{
-			name:  "integer positive",
-			value: 12345,
+			name:           "integer positive",
+			value:          12345,
 			expectedResult: []byte{0xf2, 0xc0, 0x1},
 		},
 		{
-			name:  "integer negative",
-			value: -12345,
+			name:           "integer negative",
+			value:          -12345,
 			expectedResult: []byte{0xf1, 0xc0, 0x1},
 		},
 		{
-			name:  "integer nil",
-			value: 0,
+			name:           "integer nil",
+			value:          0,
 			expectedResult: []byte{0x0},
 		},
 		{

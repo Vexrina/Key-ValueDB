@@ -5,16 +5,16 @@ import (
 )
 
 type DataBaseImpl struct {
-	dataBase map[any]Table
+	dataBase map[any]TableImpl
 }
 
 func NewDataBaseImpl() *DataBaseImpl {
 	return &DataBaseImpl{
-		dataBase: make(map[any]Table),
+		dataBase: make(map[any]TableImpl),
 	}
 }
 
-func (db *DataBaseImpl) Create(keyDB any, table Table) (bool, error) {
+func (db *DataBaseImpl) Create(keyDB any, table TableImpl) (bool, error) {
 	if _, exists := db.dataBase[keyDB]; exists {
 		return false, errors.New("Таблица с таким ключом уже существует")
 	}
@@ -23,10 +23,10 @@ func (db *DataBaseImpl) Create(keyDB any, table Table) (bool, error) {
 	return true, nil
 }
 
-func (db *DataBaseImpl) Select(keyDB any) (Table, error) {
+func (db *DataBaseImpl) Select(keyDB any) (TableImpl, error) {
 	table, exists := db.dataBase[keyDB]
 	if !exists {
-		return nil, errors.New("Таблица не найдена")
+		return TableImpl{}, errors.New("Таблица не найдена")
 	}
 
 	return table, nil
@@ -60,7 +60,7 @@ func (db *DataBaseImpl) Rename(keyOld, keyNew any) (bool, error) {
 	return true, nil
 }
 
-func (db *DataBaseImpl) SelectAll() (map[any]Table, error) {
+func (db *DataBaseImpl) SelectAll() (map[any]TableImpl, error) {
 	if len(db.dataBase) == 0 {
 		return nil, errors.New("нет данных")
 	}

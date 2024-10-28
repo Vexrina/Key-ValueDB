@@ -7,12 +7,12 @@ type Name struct {
 }
 
 type Person struct {
-	Name   Name 
-	Age    int  
-	Active bool 
+	Name   Name
+	Age    int
+	Active bool
 }
 
 type User struct {
-	UUID   int    
-	Person Person 
+	UUID   int
+	Person Person
 }

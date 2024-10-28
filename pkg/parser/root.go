@@ -33,7 +33,7 @@ func (p *ParserImpl) parseDatabaseCommand(arguments []string) (any, error) {
 		return p.Databases.Delete(arguments[1])
 	case "create":
 		table := db.NewTableImpl()
-		return p.Databases.Create(arguments[1], table)
+		return p.Databases.Create(arguments[1], *table)
 	case "rename":
 		return p.Databases.Rename(arguments[1], arguments[2])
 	default:

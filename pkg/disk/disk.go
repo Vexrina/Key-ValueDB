@@ -4,10 +4,10 @@ import (
 	db "BD/pkg/database"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"sort"
-	"strconv"
 )
 
 type DiskImpl struct {
@@ -70,7 +70,7 @@ func (d *DiskImpl) getSortedMassiveByKey() ([]keyValueTypeKey, error) {
 func convertKeyToString(key interface{}) (string, reflect.Type, error) {
 	switch key := key.(type) {
 	case int:
-		return strconv.Itoa(key), reflect.TypeOf(key), nil
+		return fmt.Sprint(key), reflect.TypeOf(key), nil
 	case string:
 		return key, reflect.TypeOf(key), nil
 	default:
