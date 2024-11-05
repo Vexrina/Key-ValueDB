@@ -53,7 +53,7 @@ func (d *DiskImpl) readData() (bool, error) {
 		return false, errors.New("failed to unmarshal data: " + err.Error())
 	}
 
-	ok := insertData(jsonData)
+	ok := d.insertData(jsonData)
 	if !ok {
 		return false, errors.New("failed to insert data: " + err.Error())
 	}
@@ -99,14 +99,14 @@ func convertKeyToString(key any) (string, reflect.Type, error) {
 	}
 }
 
-func insertData(kvt []keyValueTypeKey) bool {
+func (d *DiskImpl) insertData(kvt []keyValueTypeKey) bool {
 	for _, item := range kvt {
 		newK, err := convertStringKeyToType(item.Key, item.KeyType)
 		if err != nil {
 			return false
 		}
 
-		_, err = db.DataBase.Create(newK, item.Value) // TO DO
+		_, err = d.DataBases.Create(newK, item.Value)
 		if err != nil {
 			return false
 		}
