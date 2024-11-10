@@ -55,23 +55,26 @@ func (p *ParserImpl) parseTableCommand(arguments []string) (any, error) {
 		return nil, fmt.Errorf("db.Select: %w", err)
 	}
 
+	if len(arguments) < 5 {
+		arguments = append(arguments, "")
+	}
+
 	switch operation {
 	case "delete":
 		return table.Delete(arguments[2])
 	case "insert":
-		val := db.Value{}
-		// if len(arguments)==5{
-		// 	val.Ttl = arguments[4] // parsing string -> time.Time
-		// }
-		val.Val = arguments[3]
+		val, errInsert := db.NewValue(arguments[3], arguments[4])
+		if errInsert != nil {
+			return nil, fmt.Errorf("db.NewValue error: %w", errInsert)
+		}
 		return table.Insert(arguments[2], val)
 	case "get":
 		return table.Get(arguments[2])
 	case "update":
-		val := db.Value{}
-		// if len(arguments)==5{
-		// 	val.Ttl = arguments[4] // parsing string -> time.Time
-		// }
+		val, errInsert := db.NewValue(arguments[3], arguments[4])
+		if errInsert != nil {
+			return nil, fmt.Errorf("db.NewValue error: %w", errInsert)
+		}
 		val.Val = arguments[3]
 		return table.Update(arguments[2], val)
 	case "size":

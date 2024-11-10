@@ -9,7 +9,7 @@ import (
 func TestTable(t *testing.T) {
 	table := NewTableImpl()
 
-	parsedTime, err := table.parseTime("25.10.2024")
+	parsedTime, err := parseTime("25.10.2024")
 	require.NoError(t, err)
 
 	// 1. Тест вставки новой записи
