@@ -42,7 +42,7 @@ func tableCreate(
 		return
 	}
 
-	_, err = db.Create(tB.TableName, database.NewTableImpl{})
+	_, err = db.Create(tB.TableName, database.TableImpl{})
 
 	w.WriteHeader(http.StatusCreated)
 }
