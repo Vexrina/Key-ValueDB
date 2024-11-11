@@ -12,11 +12,11 @@ func databaseHandler(
 	http.HandleFunc(
 		"/api/database",
 		func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method{
+			switch r.Method {
 			case http.MethodPost:
 				databaseCreate(w, r, allDbs)
 			case http.MethodDelete:
-				dataBaseDelete(w,r,allDbs)
+				dataBaseDelete(w, r, allDbs)
 			default:
 				http.Error(w, "not allowed method", http.StatusBadRequest)
 			}
@@ -30,11 +30,11 @@ func tableHandler(
 	http.HandleFunc(
 		"/api/table",
 		func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method{
+			switch r.Method {
 			case http.MethodPost:
 				tableCreate(w, r, allDbs)
 			case http.MethodDelete:
-				tableDelete(w,r,allDbs)
+				tableDelete(w, r, allDbs)
 			default:
 				http.Error(w, "not allowed method", http.StatusBadRequest)
 			}
@@ -48,15 +48,19 @@ func keyHandler(
 	http.HandleFunc(
 		"/api/key",
 		func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method{
+			switch r.Method {
 			case http.MethodPost:
-				keyCreate(w, r, allDbs)
+				keyInsert(w, r, allDbs)
 			case http.MethodDelete:
-				keyDelete(w,r,allDbs)
+				keyDelete(w, r, allDbs)
+			case http.MethodGet:
+				keyGet(w, r, allDbs)
+			case http.MethodPut:
+				keyUpdate(w, r, allDbs)
 			default:
 				http.Error(w, "not allowed method", http.StatusBadRequest)
 			}
-		} ,
+		},
 	)
 }
 
@@ -66,7 +70,7 @@ func Run(allDbs map[string]database.DataBaseImpl, port string) {
 	keyHandler(allDbs)
 
 	fmt.Printf("start listening on :%s...", port)
-	if err := http.ListenAndServe(":"+port, nil); err!=nil{
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		fmt.Printf("could not start server: %s\n", err.Error())
 	}
 }

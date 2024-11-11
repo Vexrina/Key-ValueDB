@@ -7,26 +7,27 @@ import (
 )
 
 type keyBody struct {
-	KeyName string `json:"key_name"`
+	KeyName string         `json:"key_name"`
+	Value   database.Value `json:"value"`
 }
 
 // post method
-func keyCreate(
+func keyInsert(
 	w http.ResponseWriter,
 	r *http.Request,
 	allDbs map[string]database.DataBaseImpl,
 ) {
 	dbName := r.URL.Query().Get("db_name")
-    if dbName == "" {
-        http.Error(w, "db_name parameter is required", http.StatusBadRequest)
-        return
-    }
+	if dbName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
 
 	tableName := r.URL.Query().Get("table_name")
-    if tableName == "" {
-        http.Error(w, "db_name parameter is required", http.StatusBadRequest)
-        return
-    }
+	if tableName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
 
 	var kB keyBody
 
@@ -41,15 +42,25 @@ func keyCreate(
 		return
 	}
 
-	_, exist := allDbs[kB.KeyName]
-	if exist {
-		http.Error(w, "you provide existing db name for creation", http.StatusBadRequest)
+	db, ok := allDbs[dbName]
+	if !ok {
+		http.Error(w, "database not found", http.StatusNotFound)
 		return
 	}
-	
-	allDbs[kB.KeyName] = *database.NewDataBaseImpl()
 
-	w.WriteHeader(http.StatusCreated)
+	impl, err := db.Select(tableName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = impl.Insert(kB.KeyName, kB.Value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // delete method
@@ -59,16 +70,16 @@ func keyDelete(
 	allDbs map[string]database.DataBaseImpl,
 ) {
 	dbName := r.URL.Query().Get("db_name")
-    if dbName == "" {
-        http.Error(w, "db_name parameter is required", http.StatusBadRequest)
-        return
-    }
+	if dbName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
 
 	tableName := r.URL.Query().Get("table_name")
-    if tableName == "" {
-        http.Error(w, "db_name parameter is required", http.StatusBadRequest)
-        return
-    }
+	if tableName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
 
 	var kB keyBody
 
@@ -83,13 +94,116 @@ func keyDelete(
 		return
 	}
 
-	_, exist := allDbs[kB.KeyName]
-	if !exist {
-		http.Error(w, "you provide non existing db name for deleting", http.StatusBadRequest)
+	db, ok := allDbs[dbName]
+	if !ok {
+		http.Error(w, "db not exist", http.StatusNotFound)
+	}
+	ok, _ = db.Delete(kB.KeyName)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	//_, exist := allDbs[kB.KeyName]
+	//if !exist {
+	//	http.Error(w, "you provide non existing db name for deleting", http.StatusBadRequest)
+	//	return
+	//}
+	//
+	//delete(allDbs, kB.KeyName)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func keyGet(w http.ResponseWriter, r *http.Request, allDbs map[string]database.DataBaseImpl) {
+	dbName := r.URL.Query().Get("db_name")
+	if dbName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
 		return
 	}
-	
-	delete(allDbs, kB.KeyName)
 
-	w.WriteHeader(http.StatusAccepted)
+	tableName := r.URL.Query().Get("table_name")
+	if tableName == "" {
+		http.Error(w, "table_name parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	var kB keyBody
+	err := json.NewDecoder(r.Body).Decode(&kB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if kB.KeyName == "" {
+		http.Error(w, "KeyName is required", http.StatusBadRequest)
+		return
+	}
+
+	db, ok := allDbs[dbName]
+	if !ok {
+		http.Error(w, "database not found", http.StatusNotFound)
+		return
+	}
+
+	impl, err := db.Select(tableName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data, err := impl.Get(kB.KeyName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
+func keyUpdate(w http.ResponseWriter, r *http.Request, allDbs map[string]database.DataBaseImpl) {
+	dbName := r.URL.Query().Get("db_name")
+	if dbName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	tableName := r.URL.Query().Get("table_name")
+	if tableName == "" {
+		http.Error(w, "table_name parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	var kB keyBody
+	err := json.NewDecoder(r.Body).Decode(&kB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if kB.KeyName == "" {
+		http.Error(w, "KeyName is required", http.StatusBadRequest)
+		return
+	}
+
+	db, ok := allDbs[dbName]
+	if !ok {
+		http.Error(w, "database not found", http.StatusNotFound)
+		return
+	}
+
+	impl, err := db.Select(tableName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = impl.Update(kB.KeyName, kB.Value)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

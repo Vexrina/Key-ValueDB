@@ -17,10 +17,10 @@ func tableCreate(
 	allDbs map[string]database.DataBaseImpl,
 ) {
 	dbName := r.URL.Query().Get("db_name")
-    if dbName == "" {
-        http.Error(w, "db_name parameter is required", http.StatusBadRequest)
-        return
-    }
+	if dbName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
 
 	var tB tableBody
 
@@ -40,7 +40,7 @@ func tableCreate(
 		http.Error(w, "you provide existing db name for creation", http.StatusBadRequest)
 		return
 	}
-	
+
 	allDbs[tB.TableName] = *database.NewDataBaseImpl()
 
 	w.WriteHeader(http.StatusCreated)
@@ -53,10 +53,10 @@ func tableDelete(
 	allDbs map[string]database.DataBaseImpl,
 ) {
 	dbName := r.URL.Query().Get("db_name")
-    if dbName == "" {
-        http.Error(w, "db_name parameter is required", http.StatusBadRequest)
-        return
-    }
+	if dbName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
 
 	var tB tableBody
 
@@ -76,8 +76,26 @@ func tableDelete(
 		http.Error(w, "you provide non existing db name for deleting", http.StatusBadRequest)
 		return
 	}
-	
+
 	delete(allDbs, tB.TableName)
 
 	w.WriteHeader(http.StatusAccepted)
 }
+
+//func renameTale(w http.ResponseWriter, r *http.Request, allDbs map[string]database.DataBaseImpl) {
+//	dbName := r.URL.Query().Get("db_name")
+//	if dbName == "" {
+//		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+//		return
+//	}
+//	var tB tableBody
+//	err := json.NewDecoder(r.Body).Decode(&tB)
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//
+//	if tB.TableName == "" {
+//
+//	}
+//}
