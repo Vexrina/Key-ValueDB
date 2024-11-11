@@ -37,6 +37,8 @@ func tableHandler(
 				tableDelete(w, r, allDbs)
 			case http.MethodPut:
 				tableRename(w, r, allDbs)
+			case http.MethodGet:
+				tableSelect(w, r, allDbs)
 			default:
 				http.Error(w, "not allowed method", http.StatusBadRequest)
 			}
