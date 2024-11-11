@@ -82,20 +82,35 @@ func tableDelete(
 	w.WriteHeader(http.StatusAccepted)
 }
 
-//func renameTale(w http.ResponseWriter, r *http.Request, allDbs map[string]database.DataBaseImpl) {
-//	dbName := r.URL.Query().Get("db_name")
-//	if dbName == "" {
-//		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
-//		return
-//	}
-//	var tB tableBody
-//	err := json.NewDecoder(r.Body).Decode(&tB)
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusBadRequest)
-//		return
-//	}
-//
-//	if tB.TableName == "" {
-//
-//	}
-//}
+func tableRename(w http.ResponseWriter, r *http.Request, allDbs map[string]database.DataBaseImpl) {
+	dbName := r.URL.Query().Get("db_name")
+	if dbName == "" {
+		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		return
+	}
+	var tB tableBody
+	err := json.NewDecoder(r.Body).Decode(&tB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if tB.TableName == "" {
+		http.Error(w, "you dont provide db name for renaming", http.StatusBadRequest)
+		return
+	}
+
+	db, ok := allDbs[dbName]
+	if !ok {
+		http.Error(w, "database not found", http.StatusNotFound)
+		return
+	}
+
+	_, err = db.Rename(tB.TableName, 123456)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
