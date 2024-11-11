@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -18,6 +19,17 @@ func NewTableImpl() *TableImpl {
 	return &TableImpl{
 		dataTable: make(map[any]Value),
 	}
+}
+
+func NewValue(val any, dateStr string) (Value, error) {
+	ttl, err := parseTime(dateStr)
+	if err != nil {
+		return Value{}, fmt.Errorf("parseTime error: %w", err)
+	}
+	return Value{
+		Val: val,
+		Ttl: ttl,
+	}, nil
 }
 
 func (t *TableImpl) Delete(keyTable any) (bool, error) {
@@ -63,10 +75,13 @@ func (t *TableImpl) Size() int {
 	return len(t.dataTable)
 }
 
-func (t *TableImpl) parseTime(dateStr string) (time.Time, error) {
-	parsedTime, err := time.Parse("02.01.2006", dateStr)
+func parseTime(dateStr string) (time.Time, error) {
+	if dateStr == "" {
+		return time.Now().Add(5 * time.Minute).Truncate(time.Second), nil
+	}
+	parsedTime, err := time.Parse("02.01.2006T15:04:05", dateStr)
 	if err != nil {
-		return time.Time{}, errors.New("Невозможно распарсить дату!")
+		return time.Time{}, fmt.Errorf("time.Parse: %w", err)
 	}
 	return parsedTime, nil
 }

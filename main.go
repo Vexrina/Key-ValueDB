@@ -10,23 +10,27 @@ import (
 )
 
 func main() {
+	go http.Run(make(map[string]database.DataBaseImpl), "8080")
+	fmt.Println()
+
 	reader := bufio.NewReader(os.Stdin)
 
 	db := database.NewDataBaseImpl()
-	parser := parser.ParserImpl{
+	parse := parser.ParserImpl{
 		Databases: *db,
 	}
 
-	go http.Run(make(map[string]database.DataBaseImpl), "8080")
 	for {
 		fmt.Print("our db $ ")
 		cmd, _ := reader.ReadString('\n')
 
-		result, err := parser.Parse(cmd)
+		result, err := parse.Parse(cmd)
 
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
 		fmt.Println(result)
 	}
+
 }
