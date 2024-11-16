@@ -38,7 +38,7 @@ func keyInsert(
 	}
 
 	if kB.KeyName == "" {
-		http.Error(w, "you dont provide db name for creation", http.StatusBadRequest)
+		http.Error(w, "you dont provide key name for creation", http.StatusBadRequest)
 		return
 	}
 

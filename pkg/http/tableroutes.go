@@ -36,13 +36,13 @@ func tableCreate(
 		return
 	}
 
-	db, exist := allDbs[dbName]
+	dsb, exist := allDbs[dbName]
 	if !exist {
 		http.Error(w, "you provide non-existing db name for creation", http.StatusBadRequest)
 		return
 	}
-
-	_, err = db.Create(tB.TableName, database.TableImpl{})
+	table := database.NewTableImpl()
+	_, err = dsb.Create(tB.TableName, *table)
 
 	w.WriteHeader(http.StatusCreated)
 }
