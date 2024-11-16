@@ -98,18 +98,18 @@ func keyDelete(
 	if !ok {
 		http.Error(w, "db not exist", http.StatusNotFound)
 	}
-	ok, _ = db.Delete(kB.KeyName)
-	if !ok {
+
+	impl, err := db.Select(tableName)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	//_, exist := allDbs[kB.KeyName]
-	//if !exist {
-	//	http.Error(w, "you provide non existing db name for deleting", http.StatusBadRequest)
-	//	return
-	//}
-	//
-	//delete(allDbs, kB.KeyName)
+	_, err = impl.Delete(kB.KeyName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
