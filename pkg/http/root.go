@@ -68,10 +68,17 @@ func keyHandler(
 	)
 }
 
+func ping() {
+	http.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "pong")
+	})
+}
+
 func Run(allDbs map[string]database.DataBaseImpl, port string) {
 	databaseHandler(allDbs)
 	tableHandler(allDbs)
 	keyHandler(allDbs)
+	ping()
 
 	fmt.Printf("start listening on :%s...", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {

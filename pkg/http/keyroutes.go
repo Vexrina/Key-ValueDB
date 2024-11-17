@@ -3,6 +3,7 @@ package http
 import (
 	"BD/pkg/database"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -98,9 +99,12 @@ func keyDelete(
 	if !ok {
 		http.Error(w, "db not exist", http.StatusNotFound)
 	}
-	ok, _ = db.Delete(kB.KeyName)
-	if !ok {
+	ok, err = db.Delete(kB.KeyName)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	if !ok {
+		fmt.Fprint(w, "something went wrong, the key was not deleted")
 	}
 
 	//_, exist := allDbs[kB.KeyName]
