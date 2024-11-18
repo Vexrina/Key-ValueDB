@@ -2,7 +2,7 @@ import httpx
 from typing import Final
 import pytest
 import requests
-import json
+
 BASEURL: Final = "http://127.0.0.1:8080/api/"
 ENDPOINT: Final = {
     "db": "database",
