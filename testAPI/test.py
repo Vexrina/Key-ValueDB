@@ -75,7 +75,7 @@ def test_create_key(base_url, endpoint, database, table):
         "key_name": "1",
         "value": {
             "Val": "table_database",
-            "Ttl": "2025-01-01T15:30:30Z"
+            "Ttl": "2025-01-01T15:30:30Z",
         }
     }
     response = httpx.post(
@@ -93,7 +93,7 @@ def test_get_key(base_url, endpoint, database, table):
     assert response.status_code == 200, f"Unexpected status code: {response.status_code}"
     assert response.json() == {
             "Val": "table_database",
-            "Ttl": "2025-01-01T15:30:30Z"
+            "Ttl": "2025-01-01T15:30:30Z",
         }
 
 def test_put_key(base_url, endpoint, database, table):
@@ -101,7 +101,7 @@ def test_put_key(base_url, endpoint, database, table):
         "key_name": "1",
         "value": {
             "Val": "new_table_database",
-            "Ttl": "2025-01-01T15:30:30Z"
+            "Ttl": "2025-01-01T15:30:30Z",
         }
     }
     response = httpx.put(
