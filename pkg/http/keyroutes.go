@@ -39,7 +39,7 @@ func keyInsert(
 	}
 
 	if kB.KeyName == "" {
-		http.Error(w, "you dont provide db name for creation", http.StatusBadRequest)
+		http.Error(w, "you dont provide key name for creation", http.StatusBadRequest)
 		return
 	}
 
@@ -100,20 +100,20 @@ func keyDelete(
 		http.Error(w, "db not exist", http.StatusNotFound)
 	}
 	ok, err = db.Delete(kB.KeyName)
+	impl, err := db.Select(tableName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if !ok {
 		fmt.Fprint(w, "something went wrong, the key was not deleted")
 	}
 
-	//_, exist := allDbs[kB.KeyName]
-	//if !exist {
-	//	http.Error(w, "you provide non existing db name for deleting", http.StatusBadRequest)
-	//	return
-	//}
-	//
-	//delete(allDbs, kB.KeyName)
+	_, err = impl.Delete(kB.KeyName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

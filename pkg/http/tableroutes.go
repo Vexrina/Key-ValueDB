@@ -36,13 +36,13 @@ func tableCreate(
 		return
 	}
 
-	db, exist := allDbs[dbName]
+	dsb, exist := allDbs[dbName]
 	if !exist {
 		http.Error(w, "you provide non-existing db name for creation", http.StatusBadRequest)
 		return
 	}
-
-	_, err = db.Create(tB.TableName, database.TableImpl{})
+	table := database.NewTableImpl()
+	_, err = dsb.Create(tB.TableName, *table)
 
 	w.WriteHeader(http.StatusCreated)
 }
@@ -68,17 +68,21 @@ func tableDelete(
 	}
 
 	if tB.TableName == "" {
-		http.Error(w, "you dont provide db name for deleting", http.StatusBadRequest)
+		http.Error(w, "you dont provide table name for deleting", http.StatusBadRequest)
 		return
 	}
 
-	_, exist := allDbs[tB.TableName]
-	if !exist {
-		http.Error(w, "you provide non existing db name for deleting", http.StatusBadRequest)
+	db, _ := allDbs[dbName]
+	_, err = db.Select(tB.TableName)
+	if err != nil {
+		http.Error(w, "you provide non existing table name for deleting", http.StatusBadRequest)
 		return
 	}
 
-	delete(allDbs, tB.TableName)
+	_, err = db.Delete(tB.TableName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }
@@ -97,7 +101,12 @@ func tableRename(w http.ResponseWriter, r *http.Request, allDbs map[string]datab
 	}
 
 	if tB.TableName == "" {
-		http.Error(w, "you dont provide db name for renaming", http.StatusBadRequest)
+		http.Error(w, "you dont provide table name for renaming", http.StatusBadRequest)
+		return
+	}
+
+	if tB.NewTableName == "" {
+		http.Error(w, "you dont provide new table name for renaming", http.StatusBadRequest)
 		return
 	}
 
@@ -107,7 +116,7 @@ func tableRename(w http.ResponseWriter, r *http.Request, allDbs map[string]datab
 		return
 	}
 
-	_, err = db.Rename(tB.TableName, 123456)
+	_, err = db.Rename(tB.TableName, tB.NewTableName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

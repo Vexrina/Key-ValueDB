@@ -7,8 +7,8 @@ import (
 )
 
 type Value struct {
-	Val any
-	Ttl time.Time
+	Val any       `json:"Val"`
+	Ttl time.Time `json:"Ttl"`
 }
 
 type TableImpl struct {
