@@ -24,18 +24,18 @@ func main() {
 	parse := parser.ParserImpl{
 		Databases: *database,
 	}
-
-	for {
-		fmt.Print("our db $ ")
-		cmd, _ := reader.ReadString('\n')
-
-		result, err := parse.Parse(cmd)
-
-		if err != nil {
-			fmt.Println(err)
-			continue
+	if os.Getenv("CLI") == "y" {
+		for {
+			fmt.Print("our db $ ")
+			cmd, _ := reader.ReadString('\n')
+	
+			result, err := parse.Parse(cmd)
+	
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(result)
 		}
-		fmt.Println(result)
 	}
-
 }
