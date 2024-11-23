@@ -56,7 +56,7 @@ func dataBaseDelete(
 		http.Error(w, "you provide non existing db name for deleting", http.StatusBadRequest)
 		return
 	}
-	
+
 	delete(allDbs, dB.DbName)
 
 	w.WriteHeader(http.StatusAccepted)

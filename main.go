@@ -1,8 +1,8 @@
 package main
 
 import (
-	"BD/pkg/database"
-	"BD/pkg/http"
+	db "BD/pkg/database"
+	server "BD/pkg/http"
 	"BD/pkg/parser"
 	"bufio"
 	"fmt"
@@ -10,27 +10,32 @@ import (
 )
 
 func main() {
-	go http.Run(make(map[string]database.DataBaseImpl), "8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	go server.Run(make(map[string]db.DataBaseImpl), port)
 	fmt.Println()
 
 	reader := bufio.NewReader(os.Stdin)
 
-	db := database.NewDataBaseImpl()
+	database := db.NewDataBaseImpl()
 	parse := parser.ParserImpl{
-		Databases: *db,
+		Databases: *database,
 	}
-
-	for {
-		fmt.Print("our db $ ")
-		cmd, _ := reader.ReadString('\n')
-
-		result, err := parse.Parse(cmd)
-
-		if err != nil {
-			fmt.Println(err)
-			continue
+	if os.Getenv("CLI") == "y" {
+		for {
+			fmt.Print("our db $ ")
+			cmd, _ := reader.ReadString('\n')
+	
+			result, err := parse.Parse(cmd)
+	
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			fmt.Println(result)
 		}
-		fmt.Println(result)
 	}
-
 }
