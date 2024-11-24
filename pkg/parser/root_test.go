@@ -24,12 +24,12 @@ func Test_BasicScenario(t *testing.T) {
 		{
 			scenarioName: "create table1, insert value, get value",
 			commands: []string{
-				"DB select table1",
-				"DB create table1",
-				"DB select table1",
-				"Table insert table1 abc abc 11.11.2026T11:11:11",
-				"DB select table1",
-				"Table get table1 abc",
+				"DB db1 select table1",
+				"DB db1 create table1",
+				"DB db1 select table1",
+				"Table db1 insert table1 abc abc 11.11.2026T11:11:11",
+				"DB db1 select table1",
+				"Table db1 get table1 abc",
 			},
 			errNo: []bool{
 				true,
@@ -51,14 +51,14 @@ func Test_BasicScenario(t *testing.T) {
 		{
 			scenarioName: "create table1, insert value, create table2, insert same value to table2, table1=table2, drops tables",
 			commands: []string{
-				"DB create table1",
-				"Table insert table1 abc abc 11.11.2026T11:11:11",
-				"DB create table2",
-				"Table insert table2 abc abc 11.11.2026T11:11:11",
-				"Table get table1 abc",
-				"Table get table2 abc",
-				"Table delete table1 abc",
-				"Table get table1 abc",
+				"DB db1 create table1",
+				"Table db1 insert table1 abc abc 11.11.2026T11:11:11",
+				"DB db1 create table2",
+				"Table db1 insert table2 abc abc 11.11.2026T11:11:11",
+				"Table db1 get table1 abc",
+				"Table db1 get table2 abc",
+				"Table db1 delete table1 abc",
+				"Table db1 get table1 abc",
 			},
 			errNo: []bool{
 				false,
@@ -84,12 +84,12 @@ func Test_BasicScenario(t *testing.T) {
 		{
 			scenarioName: "try add and update existing key",
 			commands: []string{
-				"DB create table1",
-				"Table insert table1 abc abc 11.11.2026T11:11:11",
-				"Table insert table1 abc abcd 11.11.2027T11:11:11",
-				"Table get table1 abc",
-				"Table update table1 abc abcd 11.11.2027T11:11:11",
-				"Table get table1 abc",
+				"DB db1 create table1",
+				"Table db1 insert table1 abc abc 11.11.2026T11:11:11",
+				"Table db1 insert table1 abc abcd 11.11.2027T11:11:11",
+				"Table db1 get table1 abc",
+				"Table db1 update table1 abc abcd 11.11.2027T11:11:11",
+				"Table db1 get table1 abc",
 			},
 			errNo: []bool{
 				false,
@@ -112,9 +112,9 @@ func Test_BasicScenario(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.scenarioName, func(t *testing.T) {
-			mockDb := db.NewDataBaseImpl()
+			mockDb := map[string]db.DataBaseImpl{"db1": *db.NewDataBaseImpl()}
 			parse := ParserImpl{
-				Databases: *mockDb,
+				Databases: mockDb,
 			}
 
 			for idx, cmd := range tc.commands {

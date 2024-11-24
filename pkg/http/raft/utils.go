@@ -33,6 +33,7 @@ type RaftNode struct {
 }
 
 type LogEntry struct {
+	Index 	int	   // Индекс лога
 	Term    int    // Термин записи
 	Command string // Команда для выполнения
 	Data    any    // Данные команды

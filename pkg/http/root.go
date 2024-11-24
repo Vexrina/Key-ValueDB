@@ -74,7 +74,10 @@ func ping() {
 	})
 }
 
-func Run(allDbs map[string]database.DataBaseImpl, port string) {
+func Run(
+	allDbs map[string]database.DataBaseImpl,
+	port string,
+	) {
 	databaseHandler(allDbs)
 	tableHandler(allDbs)
 	keyHandler(allDbs)
