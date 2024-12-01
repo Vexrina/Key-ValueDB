@@ -2,6 +2,8 @@ package raft
 
 import (
 	"BD/pkg/database"
+	"BD/pkg/parser"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -28,38 +30,39 @@ type RaftNode struct {
 	LastApplied int        // Индекс последней примененной записи
 
 	// Для репликации и взаимодействия с другими узлами
-	Peers  []string                         // Список адресов других узлов
-	AllDbs map[string]database.DataBaseImpl // Данные базы
+	Peers  []string                          // Список адресов других узлов
+	AllDbs *map[string]database.DataBaseImpl // Данные базы
+	parser *parser.ParserImpl                // парсер для применения логов
 }
 
 type LogEntry struct {
-	Index 	int	   // Индекс лога
-	Term    int    // Термин записи
-	Command string // Команда для выполнения
-	Data    any    // Данные команды
+	Index   int    `json:"index"`   // Индекс лога
+	Term    int    `json:"term"`    // Термин записи
+	Command string `json:"command"` // Команда для выполнения
+	Data    any    `json:"data"`    // Данные команды
 }
 
 // голосовалка-запрос
 type VoteRequest struct {
-	Term         int    // Текущий термин кандидата
-	CandidateID  string // Идентификатор кандидата
-	LastLogIndex int    // Индекс последней записи в журнале кандидата
-	LastLogTerm  int    // Термин последней записи
+	Term         int    `json:"term"`         // Текущий термин кандидата
+	CandidateID  string `json:"candidateID"`  // Идентификатор кандидата
+	LastLogIndex int    `json:"lastLogIndex"` // Индекс последней записи в журнале кандидата
+	LastLogTerm  int    `json:"lastLogTerm"`  // Термин последней записи
 }
 
 // голосовалка-ответ
 type VoteResponse struct {
-	Term        int  // Текущий термин узла
-	VoteGranted bool // Голос был предоставлен
+	Term        int  `json:"term"`        // Текущий термин узла
+	VoteGranted bool `json:"voteGranted"` // Голос был предоставлен
 }
 
 type AppendEntriesRequest struct {
-	Term         int        `json:"term"`           // Текущий термин лидера
-	LeaderID     string     `json:"leader_id"`      // ID лидера, отправляющего запрос
-	PrevLogIndex int        `json:"prev_log_index"` // Индекс записи, предшествующей новой записи
-	PrevLogTerm  int        `json:"prev_log_term"`  // Термин записи, предшествующей новой записи
-	Entries      []LogEntry `json:"entries"`        // Лог записи для сохранения (может быть пустым для heartbeat)
-	LeaderCommit int        `json:"leader_commit"`  // Индекс последней закоммиченной записи у лидера
+	Term         int        `json:"term"`         // Текущий термин лидера
+	LeaderID     string     `json:"leaderID"`     // ID лидера, отправляющего запрос
+	PrevLogIndex int        `json:"prevLogIndex"` // Индекс записи, предшествующей новой записи
+	PrevLogTerm  int        `json:"prevLogTerm"`  // Термин записи, предшествующей новой записи
+	Entries      []LogEntry `json:"entries"`      // Лог записи для сохранения (может быть пустым для heartbeat)
+	LeaderCommit int        `json:"leaderCommit"` // Индекс последней закоммиченной записи у лидера
 }
 
 type AppendEntriesResponse struct {
@@ -76,7 +79,11 @@ func sendHeartbeats(raftNode *RaftNode) {
 	}
 }
 
-func initializeRaftNode(id string, peers []string) *RaftNode {
+func initializeRaftNode(
+	id string,
+	peers []string,
+	pars *parser.ParserImpl,
+) *RaftNode {
 	node := &RaftNode{
 		ID:                id,
 		Term:              0,
@@ -87,8 +94,11 @@ func initializeRaftNode(id string, peers []string) *RaftNode {
 		ElectionTimeout:   150 * time.Millisecond,
 		HeartbeatTimeout:  50 * time.Millisecond,
 		ResetElectionChan: make(chan bool),
+		parser:            pars,
+		AllDbs:            &pars.Databases,
 	}
-	go electionTimeout(node)
+	go electionTimeout(node) // запускаем выборы
+	startApplyLoop(node)     // запускаем применение логов
 	return node
 }
 
@@ -120,4 +130,16 @@ func initializeLeaderState(raftNode *RaftNode) {
 			}
 		}
 	}()
+}
+
+func NewRaftNode(id string, peers []string, impl *parser.ParserImpl) *RaftNode {
+	if len(peers) < 1 {
+		panic(
+			fmt.Errorf(
+				"there must be another server in the system, got %d",
+				len(peers),
+			),
+		)
+	}
+	return initializeRaftNode(id, peers, impl)
 }

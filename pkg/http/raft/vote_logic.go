@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// handleVoteRequest - Основной хендлер для голосования. Валидируем кандидата и (не) голосуем за него
 func handleVoteRequest(raftNode *RaftNode, voteRequest VoteRequest) VoteResponse {
 	raftNode.Mutex.Lock()
 	defer raftNode.Mutex.Unlock()
@@ -30,8 +31,7 @@ func handleVoteRequest(raftNode *RaftNode, voteRequest VoteRequest) VoteResponse
 	}
 
 	// Проверяем, можем ли проголосовать за кандидата
-	if (raftNode.VotedFor == "" || raftNode.VotedFor == voteRequest.CandidateID) &&
-		isCandidateLogUpToDate(raftNode, voteRequest.LastLogIndex, voteRequest.LastLogTerm) {
+	if canVote(raftNode, &voteRequest) {
 		raftNode.VotedFor = voteRequest.CandidateID
 		response.VoteGranted = true
 		// Сбрасываем таймер выборов
@@ -39,6 +39,12 @@ func handleVoteRequest(raftNode *RaftNode, voteRequest VoteRequest) VoteResponse
 	}
 
 	return response
+}
+
+func canVote(node *RaftNode, request *VoteRequest) bool {
+	firstPart := node.VotedFor == "" || node.VotedFor == request.CandidateID
+	secondPart := isCandidateLogUpToDate(node, request.LastLogIndex, request.LastLogTerm)
+	return firstPart && secondPart
 }
 
 func isCandidateLogUpToDate(raftNode *RaftNode, candidateLastLogIndex, candidateLastLogTerm int) bool {
@@ -133,47 +139,4 @@ func sendVoteRequestToPeer(peer string, voteRequest *VoteRequest) VoteResponse {
 	}
 
 	return response
-}
-
-func sendAppendEntries(peer string, raftNode *RaftNode) {
-	appendEntries := AppendEntriesRequest{
-		Term:         raftNode.Term,
-		LeaderID:     raftNode.ID,
-		PrevLogIndex: len(raftNode.Log) - 1,
-		PrevLogTerm:  raftNode.Log[len(raftNode.Log)-1].Term,
-		Entries:      []LogEntry{}, // Пустое тело для heartbeat
-		LeaderCommit: raftNode.CommitIndex,
-	}
-
-	// Отправка запроса с помощью HTTP
-	body, err := json.Marshal(appendEntries)
-	if err != nil {
-		fmt.Printf("Failed to marshal AppendEntries request: %v\n", err)
-		return
-	}
-
-	resp, err := http.Post("http://"+peer+"/api/raft/append-entries", "application/json", bytes.NewBuffer(body))
-	if err != nil {
-		fmt.Printf("Failed to send AppendEntries to %s: %v\n", peer, err)
-		return
-	}
-	defer resp.Body.Close()
-
-	var response AppendEntriesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		fmt.Printf("Failed to decode AppendEntries response: %v\n", err)
-		return
-	}
-
-	raftNode.Mutex.Lock()
-	defer raftNode.Mutex.Unlock()
-
-	// Обработка ответа
-	if response.Success {
-		// Успешно синхронизировано
-	} else if response.Term > raftNode.Term {
-		// Узел обнаружил, что его Term устарел
-		raftNode.Term = response.Term
-		raftNode.State = "Follower"
-	}
 }

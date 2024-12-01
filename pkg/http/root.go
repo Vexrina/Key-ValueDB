@@ -2,6 +2,8 @@ package http
 
 import (
 	"BD/pkg/database"
+	"BD/pkg/http/raft"
+	"BD/pkg/parser"
 	"fmt"
 	"net/http"
 )
@@ -18,7 +20,7 @@ func databaseHandler(
 			case http.MethodDelete:
 				dataBaseDelete(w, r, allDbs)
 			default:
-				http.Error(w, "not allowed method", http.StatusBadRequest)
+				http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
 			}
 		},
 	)
@@ -40,7 +42,7 @@ func tableHandler(
 			case http.MethodGet:
 				tableSelect(w, r, allDbs)
 			default:
-				http.Error(w, "not allowed method", http.StatusBadRequest)
+				http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
 			}
 		},
 	)
@@ -62,7 +64,7 @@ func keyHandler(
 			case http.MethodPut:
 				keyUpdate(w, r, allDbs)
 			default:
-				http.Error(w, "not allowed method", http.StatusBadRequest)
+				http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
 			}
 		},
 	)
@@ -74,13 +76,24 @@ func ping() {
 	})
 }
 
+// Run - функция запуска сервера. Запускать через горутину
 func Run(
-	allDbs map[string]database.DataBaseImpl,
+	p *parser.ParserImpl,
 	port string,
-	) {
-	databaseHandler(allDbs)
-	tableHandler(allDbs)
-	keyHandler(allDbs)
+	peers []string,
+) {
+	// первостепенно кладем рафт ноду, чтобы у нас сначала запустился таймер выборов и прочего
+	// а только потом бд
+	// если будет только один сервер выпадет паника(!!!)
+	// пока нет идей, как это запустить на одном сервере :) TODO: разобраться
+	raftNode := raft.NewRaftNode(port, peers, p)
+	raft.VoteHandler(raftNode)
+	raft.AppendVoteHandler(raftNode)
+
+	databaseHandler(p.Databases)
+	tableHandler(p.Databases)
+	keyHandler(p.Databases)
+	// метод проверки доступа к сервису
 	ping()
 
 	fmt.Printf("start listening on :%s...", port)
