@@ -3,7 +3,7 @@ package raft
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -121,20 +121,20 @@ func electionTimeout(raftNode *RaftNode) {
 func sendVoteRequestToPeer(peer string, voteRequest *VoteRequest) VoteResponse {
 	body, err := json.Marshal(voteRequest)
 	if err != nil {
-		fmt.Printf("Failed to marshal VoteRequest: %v\n", err)
+		log.Printf("Failed to marshal VoteRequest: %v\n", err)
 		return VoteResponse{}
 	}
 
-	resp, err := http.Post("http://"+peer+"/api/raft/request-vote", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post("http://"+peer+"/api/internal/raft/vote", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		fmt.Printf("Failed to send VoteRequest to %s: %v\n", peer, err)
+		log.Printf("Failed to send VoteRequest to %s: %v\n", peer, err)
 		return VoteResponse{}
 	}
 	defer resp.Body.Close()
 
 	var response VoteResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		fmt.Printf("Failed to decode VoteResponse: %v\n", err)
+		log.Printf("Failed to decode VoteResponse: %v\n", err)
 		return VoteResponse{}
 	}
 

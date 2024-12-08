@@ -3,7 +3,9 @@ package raft
 import (
 	"BD/pkg/database"
 	"BD/pkg/parser"
+	"encoding/gob"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -15,6 +17,7 @@ type RaftNode struct {
 	State    string // Текущее состояние: "Follower", "Candidate", "Leader"
 	Term     int    // Текущий термин
 	VotedFor string // Кандидат, за которого проголосовал узел в текущем терминe
+	log_file string // файл, который будет читать нода при запуске/писать при падении
 
 	// Для синхронизации состояний
 	Mutex             sync.Mutex // Защита состояния
@@ -33,6 +36,9 @@ type RaftNode struct {
 	Peers  []string                          // Список адресов других узлов
 	AllDbs *map[string]database.DataBaseImpl // Данные базы
 	parser *parser.ParserImpl                // парсер для применения логов
+
+	NextIndex  map[string]int // Карта: узел -> индекс следующей записи
+	MatchIndex map[string]int // Последний индекс, подтвержденный каждым узлом
 }
 
 type LogEntry struct {
@@ -82,12 +88,14 @@ func sendHeartbeats(raftNode *RaftNode) {
 func initializeRaftNode(
 	id string,
 	peers []string,
+	port string,
 	pars *parser.ParserImpl,
 ) *RaftNode {
 	node := &RaftNode{
 		ID:                id,
 		Term:              0,
 		State:             "Follower",
+		log_file:          fmt.Sprintf("raft_log_data/%v_raft_state.gob", port),
 		Log:               []LogEntry{},
 		Peers:             peers,
 		Mutex:             sync.Mutex{},
@@ -96,6 +104,8 @@ func initializeRaftNode(
 		ResetElectionChan: make(chan bool),
 		parser:            pars,
 		AllDbs:            &pars.Databases,
+		NextIndex:         make(map[string]int, len(peers)),
+		MatchIndex:        make(map[string]int, len(peers)),
 	}
 	go electionTimeout(node) // запускаем выборы
 	startApplyLoop(node)     // запускаем применение логов
@@ -112,27 +122,13 @@ func initializeLeaderState(raftNode *RaftNode) {
 	// Инициализируем CommitIndex и LastApplied, если требуется
 	raftNode.CommitIndex = 0
 	raftNode.LastApplied = 0
-
-	// Отправляем heartbeat всем узлам
-	go func() {
-		ticker := time.NewTicker(raftNode.HeartbeatTimeout)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				for _, peer := range raftNode.Peers {
-					go sendAppendEntries(peer, raftNode)
-				}
-			case <-raftNode.ResetElectionChan:
-				// Если сброс произошел, завершаем отправку heartbeat
-				return
-			}
-		}
-	}()
+	for _, peer := range raftNode.Peers {
+		raftNode.NextIndex[peer] = len(raftNode.Log) + 1
+		raftNode.MatchIndex[peer] = 0
+	}
 }
 
-func NewRaftNode(id string, peers []string, impl *parser.ParserImpl) *RaftNode {
+func NewRaftNode(id string, peers []string, port string, impl *parser.ParserImpl) *RaftNode {
 	if len(peers) < 1 {
 		panic(
 			fmt.Errorf(
@@ -141,5 +137,40 @@ func NewRaftNode(id string, peers []string, impl *parser.ParserImpl) *RaftNode {
 			),
 		)
 	}
-	return initializeRaftNode(id, peers, impl)
+	return initializeRaftNode(id, peers, port, impl)
+}
+
+func saveStateToDisk(node *RaftNode) error {
+	file, err := os.Create(node.log_file)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := gob.NewEncoder(file)
+	state := map[string]interface{}{
+		"Term":     node.Term,
+		"VotedFor": node.VotedFor,
+		"Log":      node.Log,
+	}
+	return encoder.Encode(state)
+}
+
+func loadStateFromDisk(node *RaftNode) error {
+	file, err := os.Open(node.log_file)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	decoder := gob.NewDecoder(file)
+	state := map[string]interface{}{}
+	if err := decoder.Decode(&state); err != nil {
+		return err
+	}
+
+	node.Term = state["Term"].(int)
+	node.VotedFor = state["VotedFor"].(string)
+	node.Log = state["Log"].([]LogEntry)
+	return nil
 }

@@ -2,6 +2,7 @@ package raft
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -10,11 +11,13 @@ func VoteHandler(node *RaftNode) {
 		"/api/internal/raft/vote",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
+				log.Printf("not allowed method, %+v", r)
 				http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
 				return
 			}
 			var voteRequest VoteRequest
 			if err := json.NewDecoder(r.Body).Decode(&voteRequest); err != nil {
+				log.Printf("invalid request body, %+v", r)
 				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
@@ -23,6 +26,7 @@ func VoteHandler(node *RaftNode) {
 
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(response); err != nil {
+				log.Printf("Failed to encode response, %+v", response)
 				http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 			}
 		})

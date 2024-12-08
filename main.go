@@ -5,29 +5,36 @@ import (
 	server "BD/pkg/http"
 	"BD/pkg/parser"
 	"bufio"
+	"log"
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
+	log.SetOutput(os.Stdout)
+	
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	peers := getPeers()
+	
 
 	databases := make(map[string]db.DataBaseImpl)
 	parse := parser.ParserImpl{
 		Databases: databases,
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	go server.Run(
 		&parse,
 		port,
-		peers,
 	)
-	fmt.Println()
-
 	reader := bufio.NewReader(os.Stdin)
 
 	if os.Getenv("CLI") == "y" {
@@ -43,19 +50,8 @@ func main() {
 			}
 			fmt.Println(result)
 		}
+	} else {
+		<-ctx.Done()
+		log.Println("gracefully shutting down...")
 	}
-}
-
-func getPeers() []string {
-	var peers []string
-	idx := 1
-	for {
-		peer := os.Getenv("PEER" + fmt.Sprint(idx))
-		if peer == "" {
-			break
-		}
-		peers = append(peers, peer)
-		idx += 1
-	}
-	return peers
 }

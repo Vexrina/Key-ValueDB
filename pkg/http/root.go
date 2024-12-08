@@ -3,17 +3,23 @@ package http
 import (
 	"BD/pkg/database"
 	"BD/pkg/http/raft"
+	"log"
 	"BD/pkg/parser"
 	"fmt"
 	"net/http"
+	"os"
 )
 
 func databaseHandler(
 	allDbs map[string]database.DataBaseImpl,
+	opts ...func(w http.ResponseWriter, r *http.Request),
 ) {
 	http.HandleFunc(
 		"/api/database",
 		func(w http.ResponseWriter, r *http.Request) {
+			for _, opt :=range opts{
+				opt(w, r)
+			}
 			switch r.Method {
 			case http.MethodPost:
 				databaseCreate(w, r, allDbs)
@@ -28,10 +34,14 @@ func databaseHandler(
 
 func tableHandler(
 	allDbs map[string]database.DataBaseImpl,
+	opts ...func(w http.ResponseWriter, r *http.Request),
 ) {
 	http.HandleFunc(
 		"/api/table",
 		func(w http.ResponseWriter, r *http.Request) {
+			for _, opt :=range opts{
+				opt(w, r)
+			}
 			switch r.Method {
 			case http.MethodPost:
 				tableCreate(w, r, allDbs)
@@ -50,10 +60,14 @@ func tableHandler(
 
 func keyHandler(
 	allDbs map[string]database.DataBaseImpl,
+	opts ...func(w http.ResponseWriter, r *http.Request),
 ) {
 	http.HandleFunc(
 		"/api/key",
 		func(w http.ResponseWriter, r *http.Request) {
+			for _, opt :=range opts{
+				opt(w, r)
+			}
 			switch r.Method {
 			case http.MethodPost:
 				keyInsert(w, r, allDbs)
@@ -80,24 +94,51 @@ func ping() {
 func Run(
 	p *parser.ParserImpl,
 	port string,
-	peers []string,
 ) {
-	// первостепенно кладем рафт ноду, чтобы у нас сначала запустился таймер выборов и прочего
-	// а только потом бд
-	// если будет только один сервер выпадет паника(!!!)
-	// пока нет идей, как это запустить на одном сервере :) TODO: разобраться
-	raftNode := raft.NewRaftNode(port, peers, p)
-	raft.VoteHandler(raftNode)
-	raft.AppendVoteHandler(raftNode)
+	
+	peers := getPeers()
+	log.Println(fmt.Sprintf("find %d peers", len(peers)))
 
-	databaseHandler(p.Databases)
-	tableHandler(p.Databases)
-	keyHandler(p.Databases)
-	// метод проверки доступа к сервису
+	if len(peers) != 0 {
+		log.Println("start with raft node")
+		raftNode := raft.NewRaftNode(port, peers, port, p)
+		raft.VoteHandler(raftNode)
+		raft.AppendVoteHandler(raftNode)
+		databaseHandler(p.Databases, raft_check(raftNode))
+		tableHandler(p.Databases,raft_check(raftNode))
+		keyHandler(p.Databases,  raft_check(raftNode))
+	} else {
+		log.Println("start without raft node")
+		databaseHandler(p.Databases)
+		tableHandler(p.Databases)
+		keyHandler(p.Databases)
+	}
 	ping()
-
-	fmt.Printf("start listening on :%s...", port)
+	log.Println(fmt.Sprintf("start listening on:%s", port))
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		fmt.Printf("could not start server: %s\n", err.Error())
 	}
+}
+
+func raft_check(node *raft.RaftNode) func(w http.ResponseWriter, r *http.Request){
+	return func(w http.ResponseWriter, r *http.Request){
+		if node.State != "Leader" {
+			http.Error(w, "not leader, try another pod", http.StatusForbidden)
+		}
+	}
+}
+
+func getPeers() []string {
+	var peers []string
+	idx := 1
+	for {
+		peer := os.Getenv("PEER" + fmt.Sprint(idx))
+		if peer == "" {
+			break
+		}
+		log.Printf("find new peer: %s\n", peer)
+		peers = append(peers, peer)
+		idx += 1
+	}
+	return peers
 }
