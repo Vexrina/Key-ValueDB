@@ -3,8 +3,8 @@ package http
 import (
 	"BD/pkg/database"
 	"BD/pkg/http/raft"
-	"log"
 	"BD/pkg/parser"
+	"BD/pkg/xlog"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,7 +17,7 @@ func databaseHandler(
 	http.HandleFunc(
 		"/api/database",
 		func(w http.ResponseWriter, r *http.Request) {
-			for _, opt :=range opts{
+			for _, opt := range opts {
 				opt(w, r)
 			}
 			switch r.Method {
@@ -39,7 +39,7 @@ func tableHandler(
 	http.HandleFunc(
 		"/api/table",
 		func(w http.ResponseWriter, r *http.Request) {
-			for _, opt :=range opts{
+			for _, opt := range opts {
 				opt(w, r)
 			}
 			switch r.Method {
@@ -65,7 +65,7 @@ func keyHandler(
 	http.HandleFunc(
 		"/api/key",
 		func(w http.ResponseWriter, r *http.Request) {
-			for _, opt :=range opts{
+			for _, opt := range opts {
 				opt(w, r)
 			}
 			switch r.Method {
@@ -95,35 +95,36 @@ func Run(
 	p *parser.ParserImpl,
 	port string,
 ) {
-	
+
 	peers := getPeers()
-	log.Println(fmt.Sprintf("find %d peers", len(peers)))
+	xlog.Debug("find some peers", xlog.Field("number of peers", len(peers)))
 
 	if len(peers) != 0 {
-		log.Println("start with raft node")
+		xlog.Info("start with raft node")
 		raftNode := raft.NewRaftNode(port, peers, port, p)
 		raft.VoteHandler(raftNode)
 		raft.AppendVoteHandler(raftNode)
 		databaseHandler(p.Databases, raft_check(raftNode))
-		tableHandler(p.Databases,raft_check(raftNode))
-		keyHandler(p.Databases,  raft_check(raftNode))
+		tableHandler(p.Databases, raft_check(raftNode))
+		keyHandler(p.Databases, raft_check(raftNode))
 	} else {
-		log.Println("start without raft node")
+		xlog.Info("start without raft node")
 		databaseHandler(p.Databases)
 		tableHandler(p.Databases)
 		keyHandler(p.Databases)
 	}
 	ping()
-	log.Println(fmt.Sprintf("start listening on:%s", port))
+
+	xlog.Info(fmt.Sprintf("start listening on:%s", port))
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		fmt.Printf("could not start server: %s\n", err.Error())
 	}
 }
 
-func raft_check(node *raft.RaftNode) func(w http.ResponseWriter, r *http.Request){
-	return func(w http.ResponseWriter, r *http.Request){
-		if node.State != "Leader" {
-			http.Error(w, "not leader, try another pod", http.StatusForbidden)
+func raft_check(node *raft.RaftNode) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if node.State == "Follower" {
+			http.Error(w, fmt.Sprintf("now im not a leader. Leader is: %s", node.LeaderPeer), http.StatusForbidden)
 		}
 	}
 }
@@ -136,7 +137,7 @@ func getPeers() []string {
 		if peer == "" {
 			break
 		}
-		log.Printf("find new peer: %s\n", peer)
+		xlog.Debug("find new peer", xlog.Field(fmt.Sprintf("Peer %d", idx), peer))
 		peers = append(peers, peer)
 		idx += 1
 	}

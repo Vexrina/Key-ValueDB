@@ -6,30 +6,33 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "8000:8000"
     environment:
-      - PORT=3000
-      - PEER1=localhost:3001
-      - PEER2=localhost:3002
+      - MYPEER=app1
+      - PORT=8000
+      - PEER1=app2:8001
+      - PEER2=app3:8002
 
   app2:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3001:3001"
+      - "8001:8001"
     environment:
-      - PORT=3001
-      - PEER1=localhost:3000
-      - PEER2=localhost:3002
+      - MYPEER=app2
+      - PORT=8001
+      - PEER1=app1:8000
+      - PEER2=app3:8002
 
   app3:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3002:3002"
+      - "8002:8002"
     environment:
-      - PORT=3002
-      - PEER1=localhost:3000
-      - PEER2=localhost:3001
+      - MYPEER=app3
+      - PORT=8002
+      - PEER1=app1:8000
+      - PEER2=app2:8001

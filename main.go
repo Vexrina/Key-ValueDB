@@ -4,8 +4,8 @@ import (
 	db "BD/pkg/database"
 	server "BD/pkg/http"
 	"BD/pkg/parser"
+	"BD/pkg/xlog"
 	"bufio"
-	"log"
 	"context"
 	"fmt"
 	"os"
@@ -14,14 +14,12 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
-	log.SetOutput(os.Stdout)
-	
+	xlog.SetupLog()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	
 
 	databases := make(map[string]db.DataBaseImpl)
 	parse := parser.ParserImpl{
@@ -52,6 +50,6 @@ func main() {
 		}
 	} else {
 		<-ctx.Done()
-		log.Println("gracefully shutting down...")
+		xlog.Info("gracefully shutting down...")
 	}
 }

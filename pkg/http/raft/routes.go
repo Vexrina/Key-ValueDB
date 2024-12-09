@@ -1,23 +1,24 @@
 package raft
 
 import (
+	"BD/pkg/xlog"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 )
 
 func VoteHandler(node *RaftNode) {
-	http.HandleFunc(
+	go http.HandleFunc(
 		"/api/internal/raft/vote",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
-				log.Printf("not allowed method, %+v", r)
+				xlog.Error("not allowed method", xlog.Field("request", fmt.Sprintf("%+v", r)))
 				http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
 				return
 			}
 			var voteRequest VoteRequest
 			if err := json.NewDecoder(r.Body).Decode(&voteRequest); err != nil {
-				log.Printf("invalid request body, %+v", r)
+				xlog.Error("invalid request body", xlog.Field("request", fmt.Sprintf("%+v", r)))
 				http.Error(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
@@ -26,14 +27,14 @@ func VoteHandler(node *RaftNode) {
 
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(response); err != nil {
-				log.Printf("Failed to encode response, %+v", response)
+				xlog.Error("Failed to encode response", xlog.Field("response", fmt.Sprintf("%+v", response)))
 				http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 			}
 		})
 }
 
 func AppendVoteHandler(node *RaftNode) {
-	http.HandleFunc(
+	go http.HandleFunc(
 		"/api/internal/raft/append-entries",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {

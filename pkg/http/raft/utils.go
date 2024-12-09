@@ -3,6 +3,7 @@ package raft
 import (
 	"BD/pkg/database"
 	"BD/pkg/parser"
+	"BD/pkg/xlog"
 	"encoding/gob"
 	"fmt"
 	"os"
@@ -13,11 +14,13 @@ import (
 // состояние рафта
 type RaftNode struct {
 	// Базовые данные о узле
-	ID       string // Идентификатор узла
-	State    string // Текущее состояние: "Follower", "Candidate", "Leader"
-	Term     int    // Текущий термин
-	VotedFor string // Кандидат, за которого проголосовал узел в текущем терминe
-	log_file string // файл, который будет читать нода при запуске/писать при падении
+	ID         string // Идентификатор узла
+	State      string // Текущее состояние: "Follower", "Candidate", "Leader"
+	Term       int    // Текущий термин
+	VotedFor   string // Кандидат, за которого проголосовал узел в текущем терминe
+	log_file   string // файл, который будет читать нода при запуске/писать при падении
+	LeaderPeer string
+	myPeer     string
 
 	// Для синхронизации состояний
 	Mutex             sync.Mutex // Защита состояния
@@ -37,7 +40,7 @@ type RaftNode struct {
 	AllDbs *map[string]database.DataBaseImpl // Данные базы
 	parser *parser.ParserImpl                // парсер для применения логов
 
-	NextIndex  map[string]int // Карта: узел -> индекс следующей записи
+	NextIndex  map[string]int // узел -> индекс следующей записи
 	MatchIndex map[string]int // Последний индекс, подтвержденный каждым узлом
 }
 
@@ -54,6 +57,7 @@ type VoteRequest struct {
 	CandidateID  string `json:"candidateID"`  // Идентификатор кандидата
 	LastLogIndex int    `json:"lastLogIndex"` // Индекс последней записи в журнале кандидата
 	LastLogTerm  int    `json:"lastLogTerm"`  // Термин последней записи
+	LeaderPeer   string `json:"leaderPeer"`   // Откуда пришло сообщение
 }
 
 // голосовалка-ответ
@@ -99,13 +103,15 @@ func initializeRaftNode(
 		Log:               []LogEntry{},
 		Peers:             peers,
 		Mutex:             sync.Mutex{},
-		ElectionTimeout:   150 * time.Millisecond,
+		ElectionTimeout:   3 * time.Second,
 		HeartbeatTimeout:  50 * time.Millisecond,
 		ResetElectionChan: make(chan bool),
 		parser:            pars,
 		AllDbs:            &pars.Databases,
 		NextIndex:         make(map[string]int, len(peers)),
 		MatchIndex:        make(map[string]int, len(peers)),
+		LeaderPeer:        "",
+		myPeer:            os.Getenv("MYPEER"),
 	}
 	go electionTimeout(node) // запускаем выборы
 	startApplyLoop(node)     // запускаем применение логов
@@ -113,8 +119,8 @@ func initializeRaftNode(
 }
 
 func initializeLeaderState(raftNode *RaftNode) {
+	xlog.Debug("LOCKED")
 	raftNode.Mutex.Lock()
-	defer raftNode.Mutex.Unlock()
 
 	// Устанавливаем все необходимые параметры для состояния лидера
 	raftNode.State = "Leader"
@@ -126,10 +132,17 @@ func initializeLeaderState(raftNode *RaftNode) {
 		raftNode.NextIndex[peer] = len(raftNode.Log) + 1
 		raftNode.MatchIndex[peer] = 0
 	}
+	raftNode.LeaderPeer = raftNode.myPeer
+	raftNode.Mutex.Unlock()
+	xlog.Debug("UNLOCK")
 }
 
 func NewRaftNode(id string, peers []string, port string, impl *parser.ParserImpl) *RaftNode {
 	if len(peers) < 1 {
+		xlog.Error(
+			"there must be another server in the system",
+			xlog.Field("number of peers", len(peers)),
+		)
 		panic(
 			fmt.Errorf(
 				"there must be another server in the system, got %d",
@@ -141,6 +154,7 @@ func NewRaftNode(id string, peers []string, port string, impl *parser.ParserImpl
 }
 
 func saveStateToDisk(node *RaftNode) error {
+	xlog.Info("start saving to disk")
 	file, err := os.Create(node.log_file)
 	if err != nil {
 		return err
@@ -153,10 +167,12 @@ func saveStateToDisk(node *RaftNode) error {
 		"VotedFor": node.VotedFor,
 		"Log":      node.Log,
 	}
+	xlog.Info("end saving to disk")
 	return encoder.Encode(state)
 }
 
 func loadStateFromDisk(node *RaftNode) error {
+	xlog.Info("start loading from disk")
 	file, err := os.Open(node.log_file)
 	if err != nil {
 		return err
@@ -166,11 +182,13 @@ func loadStateFromDisk(node *RaftNode) error {
 	decoder := gob.NewDecoder(file)
 	state := map[string]interface{}{}
 	if err := decoder.Decode(&state); err != nil {
+		xlog.Error("got error during loading from disk", xlog.ErrorField(err))
 		return err
 	}
 
 	node.Term = state["Term"].(int)
 	node.VotedFor = state["VotedFor"].(string)
 	node.Log = state["Log"].([]LogEntry)
+	xlog.Info("end loading from disk")
 	return nil
 }
