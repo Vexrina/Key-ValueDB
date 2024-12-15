@@ -18,6 +18,7 @@ type RaftNode struct {
 	State      string // Текущее состояние: "Follower", "Candidate", "Leader"
 	Term       int    // Текущий термин
 	VotedFor   string // Кандидат, за которого проголосовал узел в текущем терминe
+	dirPath    string // дира, где лежит log_file
 	log_file   string // файл, который будет читать нода при запуске/писать при падении
 	LeaderPeer string
 	myPeer     string
@@ -76,8 +77,9 @@ type AppendEntriesRequest struct {
 }
 
 type AppendEntriesResponse struct {
-	Term    int  `json:"term"`    // Текущий термин узла (для актуализации лидера)
-	Success bool `json:"success"` // Флаг успешности: true, если запись или heartbeat приняты
+	Term          int  `json:"term"`    // Текущий термин узла (для актуализации лидера)
+	Success       bool `json:"success"` // Флаг успешности: true, если запись или heartbeat приняты
+	CommitedIndex int  `json:"index"`
 }
 
 func sendHeartbeats(raftNode *RaftNode) {
@@ -99,7 +101,8 @@ func initializeRaftNode(
 		ID:                id,
 		Term:              0,
 		State:             "Follower",
-		log_file:          fmt.Sprintf("raft_log_data/%v_raft_state.gob", port),
+		dirPath:           "raft_log_data",
+		log_file:          fmt.Sprintf("/%v_raft_state.gob", port),
 		Log:               []LogEntry{},
 		Peers:             peers,
 		Mutex:             sync.Mutex{},
@@ -114,27 +117,11 @@ func initializeRaftNode(
 		myPeer:            os.Getenv("MYPEER"),
 	}
 	go electionTimeout(node) // запускаем выборы
-	startApplyLoop(node)     // запускаем применение логов
+	go startApplyLoop(node)  // запускаем применение логов
+
+	gob.Register(LogEntry{})
+	gob.Register([]LogEntry{})
 	return node
-}
-
-func initializeLeaderState(raftNode *RaftNode) {
-	xlog.Debug("LOCKED")
-	raftNode.Mutex.Lock()
-
-	// Устанавливаем все необходимые параметры для состояния лидера
-	raftNode.State = "Leader"
-
-	// Инициализируем CommitIndex и LastApplied, если требуется
-	raftNode.CommitIndex = 0
-	raftNode.LastApplied = 0
-	for _, peer := range raftNode.Peers {
-		raftNode.NextIndex[peer] = len(raftNode.Log) + 1
-		raftNode.MatchIndex[peer] = 0
-	}
-	raftNode.LeaderPeer = raftNode.myPeer
-	raftNode.Mutex.Unlock()
-	xlog.Debug("UNLOCK")
 }
 
 func NewRaftNode(id string, peers []string, port string, impl *parser.ParserImpl) *RaftNode {
@@ -155,8 +142,14 @@ func NewRaftNode(id string, peers []string, port string, impl *parser.ParserImpl
 
 func saveStateToDisk(node *RaftNode) error {
 	xlog.Info("start saving to disk")
-	file, err := os.Create(node.log_file)
+	err := os.MkdirAll(node.dirPath, os.ModePerm)
 	if err != nil {
+		xlog.Error("got error during create dir on disk", xlog.ErrorField(err))
+		return err
+	}
+	file, err := os.Create(node.dirPath + node.log_file)
+	if err != nil {
+		xlog.Error("got error during save on disk", xlog.ErrorField(err))
 		return err
 	}
 	defer file.Close()
@@ -173,8 +166,9 @@ func saveStateToDisk(node *RaftNode) error {
 
 func loadStateFromDisk(node *RaftNode) error {
 	xlog.Info("start loading from disk")
-	file, err := os.Open(node.log_file)
+	file, err := os.Open(node.dirPath + node.log_file)
 	if err != nil {
+		xlog.Error("got error during loading on disk", xlog.ErrorField(err))
 		return err
 	}
 	defer file.Close()

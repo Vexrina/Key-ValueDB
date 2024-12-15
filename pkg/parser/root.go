@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"BD/pkg/database"
 	db "BD/pkg/database"
 	"fmt"
 	"strings"
@@ -16,12 +17,38 @@ func (p *ParserImpl) Parse(command string) (any, error) {
 		return nil, fmt.Errorf("there are not enough arguments in the command, got %d, need %d", len(arguments), MINIMUM_LENGTH)
 	}
 	switch arguments[0] {
+	case "SYSTEM":
+		return p.parseSystemCommand(arguments[1:])
 	case "DB":
 		return p.parseDatabaseCommand(arguments[1:])
 	case "Table":
 		return p.parseTableCommand(arguments[1:])
 	default:
 		return nil, fmt.Errorf("please specify what you want to perform the operation on, \"DB\" or \"Table\"")
+	}
+}
+
+func (p *ParserImpl) parseSystemCommand(arguments []string) (any, error) {
+	operation := arguments[0]
+	dbName := arguments[1]
+	switch operation {
+	case "delete":
+		if _, exist := p.Databases[dbName]; !exist {
+			return nil, fmt.Errorf("you provide non-existing database name")
+		}
+		delete(p.Databases, dbName)
+		return nil, nil
+	case "create":
+		if _, exist := p.Databases[dbName]; exist {
+			return nil, fmt.Errorf("you provide existing database name")
+		}
+		p.Databases[dbName] = *database.NewDataBaseImpl()
+		return nil, nil
+	default:
+		return nil, fmt.Errorf(
+			"please specify which operation you want to perform, here are the available operations: %v",
+			p.getTableOperations(),
+		)
 	}
 }
 
@@ -99,7 +126,7 @@ func (p *ParserImpl) parseTableCommand(arguments []string) (any, error) {
 	default:
 		return nil, fmt.Errorf(
 			"please specify which operation you want to perform, here are the available operations: %v",
-			p.getTableOperations(),
+			p.getValueOperations(),
 		)
 	}
 }
@@ -121,5 +148,12 @@ func (p *ParserImpl) getValueOperations() []string {
 		"update",
 		"size",
 		"parseTime",
+	}
+}
+
+func (p *ParserImpl) getSystemOperations() []string {
+	return []string{
+		"delete",
+		"create",
 	}
 }

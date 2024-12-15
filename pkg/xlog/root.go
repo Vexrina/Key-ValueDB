@@ -36,7 +36,7 @@ func Info(msg string, fields ...LogField) {
 }
 
 func SetupLog() {
-	log.SetFlags(log.Ldate | log.Ltime)
+	log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
 	log.SetOutput(os.Stdout)
 }
 

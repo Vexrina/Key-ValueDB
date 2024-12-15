@@ -1,9 +1,8 @@
 package raft
 
 import (
-	"BD/pkg/xlog"
+	u "BD/pkg/http/utils"
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
@@ -12,52 +11,45 @@ func VoteHandler(node *RaftNode) {
 		"/api/internal/raft/vote",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
-				xlog.Error("not allowed method", xlog.Field("request", fmt.Sprintf("%+v", r)))
-				http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
+				u.WriteApiError(w, "not allowed method", http.StatusMethodNotAllowed)
 				return
 			}
 			var voteRequest VoteRequest
 			if err := json.NewDecoder(r.Body).Decode(&voteRequest); err != nil {
-				xlog.Error("invalid request body", xlog.Field("request", fmt.Sprintf("%+v", r)))
-				http.Error(w, "invalid request body", http.StatusBadRequest)
+				u.WriteApiError(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
 
 			response := handleVoteRequest(node, voteRequest)
 
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(response); err != nil {
-				xlog.Error("Failed to encode response", xlog.Field("response", fmt.Sprintf("%+v", response)))
-				http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-			}
+			u.WriteApiOK(w, response, http.StatusAccepted)
 		})
 }
 
-func AppendVoteHandler(node *RaftNode) {
+func AppendEntriesHandler(node *RaftNode) {
 	go http.HandleFunc(
 		"/api/internal/raft/append-entries",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodPost {
-				http.Error(w, "not allowed method", http.StatusMethodNotAllowed)
+				u.WriteApiError(w, "not allowed method", http.StatusMethodNotAllowed)
 				return
 			}
 			var appendEntries AppendEntriesRequest
 			if err := json.NewDecoder(r.Body).Decode(&appendEntries); err != nil {
-				http.Error(w, "invalid request body", http.StatusBadRequest)
+				u.WriteApiError(w, "invalid request body", http.StatusBadRequest)
 				return
 			}
 			if len(appendEntries.Entries) != 0 {
-				handleAppendLog(node, appendEntries)
+				response := handleAppendLog(node, appendEntries)
+				u.WriteApiOK(w, response, http.StatusAccepted)
+				return
 			}
 
 			response := AppendEntriesResponse{
 				Term:    node.Term,
 				Success: true,
 			}
-			w.Header().Set("Content-Type", "application/json")
-			if err := json.NewEncoder(w).Encode(response); err != nil {
-				http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-			}
+			u.WriteApiOK(w, response, http.StatusAccepted)
 		},
 	)
 }

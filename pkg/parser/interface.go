@@ -1,6 +1,10 @@
 package parser
 
 /*
+работаем с системой слудующим образом:
+- SYSTEM create dbName || 3 total len || 2 of arguments
+- SYSTEM delete dbName || 3 total len || 2 of arguments
+
 работаем с таблицами следующим образом:
 - DB dbName select TableName			|| 4 total len || 3 of arguments
 - DB dbName delete TableName			|| 4 total len || 3 of arguments
@@ -15,16 +19,17 @@ package parser
 - Table dbName update TableName key value 	ttl	|| 6 total len || 5 of arguments
 - Table dbName size   TableName		   			|| 4 total len || 3 of arguments
 ---
-min len of command - 4 word
-min len of arguments - 3 word
+min len of command - 3 word
+min len of arguments - 2 word
 */
 
-const MINIMUM_LENGTH = 4
+const MINIMUM_LENGTH = 3
 
 type Parser interface {
 	Parse(command string) (any, error)
 	parseDatabaseCommand(arguments []string) (any, error)
 	parseTableCommand(arguments []string) (any, error)
+	parseSystemCommand(arguments []string) (any, error)
 
 	getDatabaseOperations() []string
 }

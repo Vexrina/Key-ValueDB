@@ -1,17 +1,14 @@
 COMPOSE_FILE = docker-compose.yaml
 
-.PHONY: build up down restart style
-
-build: 
-	docker-compose -f $(COMPOSE_FILE) build
+.PHONY: up down restart style
 
 up: 
-	docker-compose -f $(COMPOSE_FILE) up -d
+	docker-compose -f $(COMPOSE_FILE) up -d --build
 
 down: 
 	docker-compose -f $(COMPOSE_FILE) down
 
-restart: down build up
+restart: down up
 
 style:
 	go fmt ./...

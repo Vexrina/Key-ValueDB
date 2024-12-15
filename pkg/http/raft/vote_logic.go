@@ -27,7 +27,7 @@ func handleVoteRequest(raftNode *RaftNode, voteRequest VoteRequest) VoteResponse
 
 	// Если термин выше, обновляем свой термин и переходим в Follower
 	if voteRequest.Term > raftNode.Term {
-		becomeFollower(raftNode, voteRequest.Term)
+		becomeFollower(raftNode, voteRequest.Term, voteRequest.LeaderPeer)
 	}
 
 	// Проверяем, можем ли проголосовать за кандидата
@@ -85,7 +85,7 @@ func sendRequestVotes(raftNode *RaftNode) {
 		CandidateID:  candidateID,
 		LastLogIndex: lastLogIndex,
 		LastLogTerm:  lastLogTerm,
-		LeaderPeer: leaderPeer,
+		LeaderPeer:   leaderPeer,
 	}
 	xlog.Info("start requesting votes")
 	votes := 1 // Голос за самого себя
@@ -104,7 +104,7 @@ func sendRequestVotes(raftNode *RaftNode) {
 			} else if response.Term > raftNode.Term {
 				xlog.Info("got greater term")
 				raftNode.Mutex.Lock()
-				becomeFollower(raftNode, response.Term)
+				becomeFollower(raftNode, response.Term, voteRequest.LeaderPeer)
 				raftNode.Mutex.Unlock()
 			}
 		}(peer)

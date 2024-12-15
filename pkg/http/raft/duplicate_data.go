@@ -14,7 +14,6 @@ func applyCommittedEntries(raftNode *RaftNode) {
 	defer raftNode.Mutex.Unlock()
 
 	for raftNode.CommitIndex > raftNode.LastApplied {
-		raftNode.LastApplied++
 		entry := raftNode.Log[raftNode.LastApplied]
 		applyEntry(raftNode, entry)
 	}
@@ -24,29 +23,34 @@ func applyEntry(raftNode *RaftNode, entry LogEntry) {
 	fmt.Printf("Applying entry at index %d: %+v\n", entry.Index, entry)
 	_, err := raftNode.parser.Parse(entry.Command)
 	if err != nil {
-		fmt.Printf("raftNode.parser.Parse: %v", err)
+		xlog.Error("raftNode.parser.Parse", xlog.ErrorField(err))
 	}
 }
 
 func startApplyLoop(raftNode *RaftNode) {
-	go func() {
-		for {
-			time.Sleep(10 * time.Millisecond)
-			if raftNode.CommitIndex > raftNode.LastApplied {
-				applyCommittedEntries(raftNode)
-			}
+	for {
+		time.Sleep(3 * time.Second)
+		xlog.Debug("startApplyLoop", xlog.Field("commitIndex", raftNode.CommitIndex), xlog.Field("lastApplied", raftNode.LastApplied), xlog.Field("lenLog", len(raftNode.Log)))
+		if raftNode.CommitIndex > raftNode.LastApplied {
+			xlog.Info("Apply entries")
+			applyCommittedEntries(raftNode)
 		}
-	}()
+	}
 }
 
 func sendAppendEntries(peer string, raftNode *RaftNode) {
 	raftNode.Mutex.Lock()
 	prevLogIndex := raftNode.NextIndex[peer] - 1
 	prevLogTerm := 0
-	if prevLogIndex >= 0 {
+	if prevLogIndex >= 0 && len(raftNode.Log) > prevLogIndex {
 		prevLogTerm = raftNode.Log[prevLogIndex].Term
 	}
-	entries := raftNode.Log[raftNode.NextIndex[peer]:]
+	xlog.Debug("logEntries", xlog.Field("entries", raftNode.Log))
+	var entries []LogEntry
+	if len(raftNode.Log) != 0 && raftNode.NextIndex[peer] < len(raftNode.Log) {
+		entries = raftNode.Log[raftNode.NextIndex[peer]:]
+	}
+
 	leaderCommit := raftNode.CommitIndex
 	raftNode.Mutex.Unlock()
 
@@ -62,20 +66,20 @@ func sendAppendEntries(peer string, raftNode *RaftNode) {
 	// Отправка запроса
 	body, err := json.Marshal(appendEntries)
 	if err != nil {
-		fmt.Printf("Failed to marshal AppendEntries request: %v\n", err)
+		xlog.Error("Failed to marshal AppendEntries request", xlog.ErrorField(err))
 		return
 	}
 
-	resp, err := http.Post("http://"+peer+"/api/raft/append-entries", "application/json", bytes.NewBuffer(body))
+	resp, err := http.Post("http://"+peer+"/api/internal/raft/append-entries", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		fmt.Printf("Failed to send AppendEntries to %s: %v\n", peer, err)
+		xlog.Error("Failed to send AppendEntries", xlog.Field("destination", peer), xlog.ErrorField(err))
 		return
 	}
 	defer resp.Body.Close()
 
 	var response AppendEntriesResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		fmt.Printf("Failed to decode AppendEntries response: %v\n", err)
+		xlog.Error("Failed to decode AppendEntries response", xlog.ErrorField(err))
 		return
 	}
 
@@ -85,7 +89,7 @@ func sendAppendEntries(peer string, raftNode *RaftNode) {
 
 	if response.Success {
 		// Обновляем NextIndex и MatchIndex
-		raftNode.NextIndex[peer] = prevLogIndex + len(entries) + 1
+		raftNode.NextIndex[peer] = response.CommitedIndex
 		raftNode.MatchIndex[peer] = raftNode.NextIndex[peer] - 1
 	} else if response.Term > raftNode.Term {
 		// Узел обнаружил, что его Term устарел
@@ -93,7 +97,7 @@ func sendAppendEntries(peer string, raftNode *RaftNode) {
 		raftNode.State = "Follower"
 	} else {
 		// Уменьшаем NextIndex для повторной отправки
-		raftNode.NextIndex[peer] = max(1, raftNode.NextIndex[peer]-1)
+		raftNode.NextIndex[peer] = max(0, raftNode.NextIndex[peer]-1)
 	}
 }
 
@@ -121,11 +125,18 @@ func handleAppendLog(node *RaftNode, aer AppendEntriesRequest) AppendEntriesResp
 			node.Log = append(node.Log, entry)
 		}
 	}
-
 	// Обновляем CommitIndex
-	if aer.LeaderCommit > node.CommitIndex {
-		node.CommitIndex = min(aer.LeaderCommit, len(node.Log)-1)
+	if len(node.Log) > node.CommitIndex {
+		node.CommitIndex = len(node.Log)
 	}
 
-	return AppendEntriesResponse{Term: node.Term, Success: true}
+	return AppendEntriesResponse{Term: node.Term, Success: true, CommitedIndex: node.CommitIndex}
+}
+
+func AppendToLog(node *RaftNode, command string) {
+	node.Mutex.Lock()
+	idx := len(node.Log)
+	term := node.Term
+	node.Log = append(node.Log, LogEntry{idx, term, command, nil})
+	node.Mutex.Unlock()
 }
