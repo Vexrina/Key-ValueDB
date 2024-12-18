@@ -7,7 +7,7 @@ import (
 )
 
 type Value struct {
-	Val    any       `json:"val"`
+  Val    any       `json:"val"`
 	Ttl    time.Time `json:"ttl"`
 	BadTtl string
 }

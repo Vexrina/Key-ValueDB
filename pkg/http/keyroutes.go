@@ -124,8 +124,9 @@ func keyDelete(
 	}
 
 	ok, err = db.Delete(kB.KeyName)
-	if err != nil {
-		u.WriteApiError(w, err.Error(), http.StatusInternalServerError)
+	impl, err := db.Select(tableName)
+	if err != nil {		
+    u.WriteApiError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if !ok {

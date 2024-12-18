@@ -40,19 +40,18 @@ func tableCreate(
 		return
 	}
 
-	db, exist := allDbs[dbName]
+	dsb, exist := allDbs[dbName]
 	if !exist {
 		u.WriteApiError(w, "you provide non-existing db name for creation", http.StatusBadRequest)
 		return
 	}
-
-	newTable := database.NewTableImpl()
+  newTable := database.NewTableImpl()
 	_, err = db.Create(tB.TableName, *newTable)
 	if err != nil {
 		u.WriteApiError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+  
 	if node != nil {
 		raft.AppendToLog(node, fmt.Sprintf(
 			"DB %s create %s",
@@ -95,7 +94,10 @@ func tableDelete(
 		return
 	}
 
-	delete(allDbs, tB.TableName)
+	_, err = db.Delete(tB.TableName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	if node != nil {
 		raft.AppendToLog(node, fmt.Sprintf(
