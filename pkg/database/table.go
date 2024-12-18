@@ -7,17 +7,18 @@ import (
 )
 
 type Value struct {
-	Val any       `json:"Val"`
-	Ttl time.Time `json:"Ttl"`
+  Val    any       `json:"val"`
+	Ttl    time.Time `json:"ttl"`
+	BadTtl string
 }
 
 type TableImpl struct {
-	dataTable map[any]Value
+	DataTable map[any]Value `json:"table"`
 }
 
 func NewTableImpl() *TableImpl {
 	return &TableImpl{
-		dataTable: make(map[any]Value),
+		DataTable: make(map[any]Value),
 	}
 }
 
@@ -27,44 +28,49 @@ func NewValue(val any, dateStr string) (Value, error) {
 		return Value{}, fmt.Errorf("parseTime error: %w", err)
 	}
 	return Value{
-		Val: val,
-		Ttl: ttl,
+		Val:    val,
+		Ttl:    ttl,
+		BadTtl: dateStr,
 	}, nil
 }
 
 func (t *TableImpl) Delete(keyTable any) (bool, error) {
-	if _, exists := t.dataTable[keyTable]; !exists {
+	if _, exists := t.DataTable[keyTable]; !exists {
 		return false, errors.New("Такого ключа не существует! Удаление невозможно")
 	}
-	delete(t.dataTable, keyTable)
+	delete(t.DataTable, keyTable)
 	return true, nil
 }
 
 func (t *TableImpl) Insert(keyTable any, value Value) (bool, error) {
-	if _, exists := t.dataTable[keyTable]; exists {
+	t.checker()
+	if _, exists := t.DataTable[keyTable]; exists {
 		return false, errors.New("Такой ключ существует! Добавление невозможно")
 	}
 
-	t.dataTable[keyTable] = value
+	t.DataTable[keyTable] = value
 	return true, nil
 }
+
 func (t *TableImpl) Update(keyTable any, value Value) (bool, error) {
-	if _, exists := t.dataTable[keyTable]; !exists {
+	t.checker()
+	if _, exists := t.DataTable[keyTable]; !exists {
 		return false, errors.New("Такого ключа не существует! Редактирование невозможно")
 	}
 
-	t.dataTable[keyTable] = value
+	t.DataTable[keyTable] = value
 	return true, nil
 }
 
 func (t *TableImpl) Get(keyTable any) (Value, error) {
-	value, exists := t.dataTable[keyTable]
+	t.checker()
+	value, exists := t.DataTable[keyTable]
 	if !exists {
 		return Value{}, errors.New("Ключа не существует")
 	}
 
 	if time.Now().After(value.Ttl) {
-		delete(t.dataTable, keyTable)
+		delete(t.DataTable, keyTable)
 		return Value{}, errors.New("Ключ был удален")
 	}
 
@@ -72,7 +78,7 @@ func (t *TableImpl) Get(keyTable any) (Value, error) {
 }
 
 func (t *TableImpl) Size() int {
-	return len(t.dataTable)
+	return len(t.DataTable)
 }
 
 func parseTime(dateStr string) (time.Time, error) {
@@ -84,4 +90,10 @@ func parseTime(dateStr string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("time.Parse: %w", err)
 	}
 	return parsedTime, nil
+}
+
+func (t *TableImpl) checker() {
+	if t.DataTable == nil {
+		t.DataTable = make(map[any]Value)
+	}
 }

@@ -1,13 +1,14 @@
 package parser
 
 import (
+	"BD/pkg/database"
 	db "BD/pkg/database"
 	"fmt"
 	"strings"
 )
 
 type ParserImpl struct {
-	Databases db.DataBaseImpl
+	Databases map[string]db.DataBaseImpl
 }
 
 func (p *ParserImpl) Parse(command string) (any, error) {
@@ -16,6 +17,8 @@ func (p *ParserImpl) Parse(command string) (any, error) {
 		return nil, fmt.Errorf("there are not enough arguments in the command, got %d, need %d", len(arguments), MINIMUM_LENGTH)
 	}
 	switch arguments[0] {
+	case "SYSTEM":
+		return p.parseSystemCommand(arguments[1:])
 	case "DB":
 		return p.parseDatabaseCommand(arguments[1:])
 	case "Table":
@@ -25,17 +28,50 @@ func (p *ParserImpl) Parse(command string) (any, error) {
 	}
 }
 
-func (p *ParserImpl) parseDatabaseCommand(arguments []string) (any, error) {
-	switch arguments[0] {
-	case "select":
-		return p.Databases.Select(arguments[1])
+func (p *ParserImpl) parseSystemCommand(arguments []string) (any, error) {
+	operation := arguments[0]
+	dbName := arguments[1]
+	switch operation {
 	case "delete":
-		return p.Databases.Delete(arguments[1])
+		if _, exist := p.Databases[dbName]; !exist {
+			return nil, fmt.Errorf("you provide non-existing database name")
+		}
+		delete(p.Databases, dbName)
+		return nil, nil
+	case "create":
+		if _, exist := p.Databases[dbName]; exist {
+			return nil, fmt.Errorf("you provide existing database name")
+		}
+		p.Databases[dbName] = *database.NewDataBaseImpl()
+		return nil, nil
+	default:
+		return nil, fmt.Errorf(
+			"please specify which operation you want to perform, here are the available operations: %v",
+			p.getTableOperations(),
+		)
+	}
+}
+
+func (p *ParserImpl) parseDatabaseCommand(arguments []string) (any, error) {
+	dbName := arguments[0]
+
+	database, ok := p.Databases[dbName]
+	if !ok {
+		return nil, fmt.Errorf("provided database doesnot exist")
+	}
+
+	operation := arguments[1]
+	tableName := arguments[2]
+	switch operation {
+	case "select":
+		return database.Select(tableName)
+	case "delete":
+		return database.Delete(tableName)
 	case "create":
 		table := db.NewTableImpl()
-		return p.Databases.Create(arguments[1], *table)
+		return database.Create(tableName, *table)
 	case "rename":
-		return p.Databases.Rename(arguments[1], arguments[2])
+		return database.Rename(tableName, arguments[3])
 	default:
 		return nil, fmt.Errorf(
 			"please specify which operation you want to perform, here are the available operations: %v",
@@ -45,38 +81,44 @@ func (p *ParserImpl) parseDatabaseCommand(arguments []string) (any, error) {
 }
 
 func (p *ParserImpl) parseTableCommand(arguments []string) (any, error) {
-	operation := arguments[0] //1
-	tableName := arguments[1] //2
-	// key := arguments[2]//3
-	// value := arguments[3]//4
-	// ttl := arguments[4]//5
-	table, err := p.Databases.Select(tableName)
+	dbName := arguments[0]
+
+	database, ok := p.Databases[dbName]
+	if !ok {
+		return nil, fmt.Errorf("provided database doesnot exist")
+	}
+
+	operation := arguments[1]
+	tableName := arguments[2]
+	// key := arguments[3]
+	// value := arguments[3]
+	// ttl := arguments[4]
+	table, err := database.Select(tableName)
 	if err != nil {
 		return nil, fmt.Errorf("db.Select: %w", err)
 	}
 
-	if len(arguments) < 5 {
+	if len(arguments) < 6 {
 		arguments = append(arguments, "")
 	}
 
 	switch operation {
 	case "delete":
-		return table.Delete(arguments[2])
+		return table.Delete(arguments[3])
 	case "insert":
-		val, errInsert := db.NewValue(arguments[3], arguments[4])
+		val, errInsert := db.NewValue(arguments[4], arguments[5])
 		if errInsert != nil {
 			return nil, fmt.Errorf("db.NewValue error: %w", errInsert)
 		}
-		return table.Insert(arguments[2], val)
+		return table.Insert(arguments[3], val)
 	case "get":
-		return table.Get(arguments[2])
+		return table.Get(arguments[3])
 	case "update":
-		val, errInsert := db.NewValue(arguments[3], arguments[4])
+		val, errInsert := db.NewValue(arguments[4], arguments[5])
 		if errInsert != nil {
 			return nil, fmt.Errorf("db.NewValue error: %w", errInsert)
 		}
-		val.Val = arguments[3]
-		return table.Update(arguments[2], val)
+		return table.Update(arguments[3], val)
 	case "size":
 		return table.Size(), nil
 	case "parseTime":
@@ -84,7 +126,7 @@ func (p *ParserImpl) parseTableCommand(arguments []string) (any, error) {
 	default:
 		return nil, fmt.Errorf(
 			"please specify which operation you want to perform, here are the available operations: %v",
-			p.getTableOperations(),
+			p.getValueOperations(),
 		)
 	}
 }
@@ -106,5 +148,12 @@ func (p *ParserImpl) getValueOperations() []string {
 		"update",
 		"size",
 		"parseTime",
+	}
+}
+
+func (p *ParserImpl) getSystemOperations() []string {
+	return []string{
+		"delete",
+		"create",
 	}
 }

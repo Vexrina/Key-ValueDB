@@ -2,7 +2,10 @@ package http
 
 import (
 	"BD/pkg/database"
+	"BD/pkg/http/raft"
+	u "BD/pkg/http/utils"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -16,10 +19,11 @@ func tableCreate(
 	w http.ResponseWriter,
 	r *http.Request,
 	allDbs map[string]database.DataBaseImpl,
+	node *raft.RaftNode,
 ) {
 	dbName := r.URL.Query().Get("db_name")
 	if dbName == "" {
-		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		u.WriteApiError(w, "db_name parameter is required", http.StatusBadRequest)
 		return
 	}
 
@@ -27,24 +31,35 @@ func tableCreate(
 
 	err := json.NewDecoder(r.Body).Decode(&tB)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		u.WriteApiError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if tB.TableName == "" {
-		http.Error(w, "you dont provide db name for creation", http.StatusBadRequest)
+		u.WriteApiError(w, "you dont provide db name for creation", http.StatusBadRequest)
 		return
 	}
 
 	dsb, exist := allDbs[dbName]
 	if !exist {
-		http.Error(w, "you provide non-existing db name for creation", http.StatusBadRequest)
+		u.WriteApiError(w, "you provide non-existing db name for creation", http.StatusBadRequest)
 		return
 	}
-	table := database.NewTableImpl()
-	_, err = dsb.Create(tB.TableName, *table)
-
-	w.WriteHeader(http.StatusCreated)
+  newTable := database.NewTableImpl()
+	_, err = db.Create(tB.TableName, *newTable)
+	if err != nil {
+		u.WriteApiError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+  
+	if node != nil {
+		raft.AppendToLog(node, fmt.Sprintf(
+			"DB %s create %s",
+			dbName,
+			tB.TableName,
+		))
+	}
+	u.WriteApiOK(w, nil, http.StatusCreated)
 }
 
 // delete method
@@ -52,10 +67,11 @@ func tableDelete(
 	w http.ResponseWriter,
 	r *http.Request,
 	allDbs map[string]database.DataBaseImpl,
+	node *raft.RaftNode,
 ) {
 	dbName := r.URL.Query().Get("db_name")
 	if dbName == "" {
-		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		u.WriteApiError(w, "db_name parameter is required", http.StatusBadRequest)
 		return
 	}
 
@@ -63,19 +79,18 @@ func tableDelete(
 
 	err := json.NewDecoder(r.Body).Decode(&tB)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		u.WriteApiError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if tB.TableName == "" {
-		http.Error(w, "you dont provide table name for deleting", http.StatusBadRequest)
+		u.WriteApiError(w, "you dont provide db name for deleting", http.StatusBadRequest)
 		return
 	}
 
-	db, _ := allDbs[dbName]
-	_, err = db.Select(tB.TableName)
-	if err != nil {
-		http.Error(w, "you provide non existing table name for deleting", http.StatusBadRequest)
+	_, exist := allDbs[tB.TableName]
+	if !exist {
+		u.WriteApiError(w, "you provide non existing db name for deleting", http.StatusBadRequest)
 		return
 	}
 
@@ -84,78 +99,97 @@ func tableDelete(
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	w.WriteHeader(http.StatusAccepted)
+	if node != nil {
+		raft.AppendToLog(node, fmt.Sprintf(
+			"DB %s update %s",
+			dbName,
+			tB.TableName,
+		))
+	}
+
+	u.WriteApiOK(w, nil, http.StatusAccepted)
 }
 
-func tableRename(w http.ResponseWriter, r *http.Request, allDbs map[string]database.DataBaseImpl) {
+func tableRename(
+	w http.ResponseWriter,
+	r *http.Request,
+	allDbs map[string]database.DataBaseImpl,
+	node *raft.RaftNode,
+) {
 	dbName := r.URL.Query().Get("db_name")
 	if dbName == "" {
-		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		u.WriteApiError(w, "db_name parameter is required", http.StatusBadRequest)
 		return
 	}
 	var tB tableBody
 	err := json.NewDecoder(r.Body).Decode(&tB)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		u.WriteApiError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if tB.TableName == "" {
-		http.Error(w, "you dont provide table name for renaming", http.StatusBadRequest)
-		return
-	}
-
-	if tB.NewTableName == "" {
-		http.Error(w, "you dont provide new table name for renaming", http.StatusBadRequest)
+		u.WriteApiError(w, "you dont provide db name for renaming", http.StatusBadRequest)
 		return
 	}
 
 	db, ok := allDbs[dbName]
 	if !ok {
-		http.Error(w, "database not found", http.StatusNotFound)
+		u.WriteApiError(w, "database not found", http.StatusNotFound)
 		return
 	}
 
 	_, err = db.Rename(tB.TableName, tB.NewTableName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		u.WriteApiError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	if node != nil {
+		raft.AppendToLog(node, fmt.Sprintf(
+			"DB %s rename %s %s",
+			dbName,
+			tB.TableName,
+			tB.NewTableName,
+		))
+	}
+
+	u.WriteApiOK(w, nil, http.StatusOK)
 }
 
-func tableSelect(w http.ResponseWriter, r *http.Request, allDbs map[string]database.DataBaseImpl) {
+func tableSelect(
+	w http.ResponseWriter,
+	r *http.Request,
+	allDbs map[string]database.DataBaseImpl,
+) {
 	dbName := r.URL.Query().Get("db_name")
 	if dbName == "" {
-		http.Error(w, "db_name parameter is required", http.StatusBadRequest)
+		u.WriteApiError(w, "db_name parameter is required", http.StatusBadRequest)
 		return
 	}
 	var tB tableBody
 	err := json.NewDecoder(r.Body).Decode(&tB)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		u.WriteApiError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if tB.TableName == "" {
-		http.Error(w, "you dont provide db name for renaming", http.StatusBadRequest)
+		u.WriteApiError(w, "you dont provide db name for renaming", http.StatusBadRequest)
 		return
 	}
 
 	db, ok := allDbs[dbName]
 	if !ok {
-		http.Error(w, "database not found", http.StatusNotFound)
+		u.WriteApiError(w, "database not found", http.StatusNotFound)
 		return
 	}
 
 	data, err := db.Select(tB.TableName)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		u.WriteApiError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	u.WriteApiOK(w, convertMapToJSONCompatible(data), http.StatusOK)
 }
