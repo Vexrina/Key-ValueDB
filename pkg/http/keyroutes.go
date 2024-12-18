@@ -79,7 +79,7 @@ func keyInsert(
 			tableName,
 			kB.KeyName,
 			kB.Value.Val,
-			kB.Value.Ttl,
+			kB.Value.BadTtl,
 		))
 	}
 	u.WriteApiOK(w, nil, http.StatusOK)
@@ -245,10 +245,12 @@ func keyUpdate(
 
 	if node != nil {
 		raft.AppendToLog(node, fmt.Sprintf(
-			"Table %s update %s %s",
+			"Table %s insert %s %s %s %s",
 			dbName,
 			tableName,
 			kB.KeyName,
+			kB.Value.Val,
+			kB.Value.BadTtl,
 		))
 	}
 

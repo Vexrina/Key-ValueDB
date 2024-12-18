@@ -7,8 +7,9 @@ import (
 )
 
 type Value struct {
-	Val any       `json:"val"`
-	Ttl time.Time `json:"ttl"`
+	Val    any       `json:"val"`
+	Ttl    time.Time `json:"ttl"`
+	BadTtl string
 }
 
 type TableImpl struct {
@@ -27,8 +28,9 @@ func NewValue(val any, dateStr string) (Value, error) {
 		return Value{}, fmt.Errorf("parseTime error: %w", err)
 	}
 	return Value{
-		Val: val,
-		Ttl: ttl,
+		Val:    val,
+		Ttl:    ttl,
+		BadTtl: dateStr,
 	}, nil
 }
 

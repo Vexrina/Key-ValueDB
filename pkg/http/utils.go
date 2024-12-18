@@ -10,14 +10,14 @@ import (
 	"os"
 )
 
-func raft_check(node *raft.RaftNode, w http.ResponseWriter) bool{
+func raft_check(node *raft.RaftNode, w http.ResponseWriter) bool {
 	if node != nil && node.State == "Follower" {
 		u.WriteApiError(w,
 			fmt.Sprintf(
 				"now im not a leader or candidate. Leader is: %s. MyState is %s. firstCheck: %s, SecondCheck: %s",
 				node.LeaderPeer,
 				node.State,
-				fmt.Sprint(node!=nil),
+				fmt.Sprint(node != nil),
 				fmt.Sprint(node.State != "Follower"),
 			),
 			http.StatusForbidden,

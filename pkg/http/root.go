@@ -17,7 +17,7 @@ func databaseHandler(
 	http.HandleFunc(
 		"/api/database",
 		func(w http.ResponseWriter, r *http.Request) {
-			if raft_check(node, w){
+			if raft_check(node, w) {
 				return
 			}
 			switch r.Method {
@@ -39,7 +39,7 @@ func tableHandler(
 	http.HandleFunc(
 		"/api/table",
 		func(w http.ResponseWriter, r *http.Request) {
-			if raft_check(node, w){
+			if raft_check(node, w) {
 				return
 			}
 			switch r.Method {
@@ -65,7 +65,7 @@ func keyHandler(
 	http.HandleFunc(
 		"/api/key",
 		func(w http.ResponseWriter, r *http.Request) {
-			if raft_check(node, w){
+			if raft_check(node, w) {
 				return
 			}
 			switch r.Method {

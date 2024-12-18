@@ -13,14 +13,15 @@ func applyCommittedEntries(raftNode *RaftNode) {
 	raftNode.Mutex.Lock()
 	defer raftNode.Mutex.Unlock()
 
-	for raftNode.CommitIndex > raftNode.LastApplied {
+	for raftNode.CommitIndex > raftNode.LastApplied && raftNode.LastApplied < len(raftNode.Log) {
 		entry := raftNode.Log[raftNode.LastApplied]
 		applyEntry(raftNode, entry)
+		raftNode.LastApplied++
 	}
 }
 
 func applyEntry(raftNode *RaftNode, entry LogEntry) {
-	fmt.Printf("Applying entry at index %d: %+v\n", entry.Index, entry)
+	xlog.Debug("Applying entry at index", xlog.Field("index", entry.Index), xlog.Field("entry", fmt.Sprintf("%+v", entry)))
 	_, err := raftNode.parser.Parse(entry.Command)
 	if err != nil {
 		xlog.Error("raftNode.parser.Parse", xlog.ErrorField(err))
