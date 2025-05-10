@@ -2,78 +2,75 @@ package database
 
 import (
 	"errors"
-	"sync"
+	"fmt"
 	"time"
 )
 
 type Value struct {
-	value any
-	ttl   time.Time
+  Val    any       `json:"val"`
+	Ttl    time.Time `json:"ttl"`
+	BadTtl string
 }
 
 type TableImpl struct {
-	data map[any]Value
-	Mu   sync.RWMutex
+	DataTable map[any]Value `json:"table"`
 }
 
 func NewTableImpl() *TableImpl {
 	return &TableImpl{
-		data: make(map[any]Value),
+		DataTable: make(map[any]Value),
 	}
 }
 
-func (t *TableImpl) Add(key any, value Value) (bool, error) {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
-
-	if t.data == nil {
-		t.data = make(map[any]Value)
+func NewValue(val any, dateStr string) (Value, error) {
+	ttl, err := parseTime(dateStr)
+	if err != nil {
+		return Value{}, fmt.Errorf("parseTime error: %w", err)
 	}
-
-	if _, exists := t.data[key]; exists {
-		return false, errors.New("Такой ключ уже существует")
-	}
-
-	t.data[key] = value
-	return true, nil
+	return Value{
+		Val:    val,
+		Ttl:    ttl,
+		BadTtl: dateStr,
+	}, nil
 }
 
-func (t *TableImpl) Delete(key any) (bool, error) {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
-	if _, exists := t.data[key]; !exists {
+func (t *TableImpl) Delete(keyTable any) (bool, error) {
+	if _, exists := t.DataTable[keyTable]; !exists {
 		return false, errors.New("Такого ключа не существует! Удаление невозможно")
 	}
-	delete(t.data, key)
+	delete(t.DataTable, keyTable)
 	return true, nil
 }
 
-func (t *TableImpl) Put(key any, value Value) (bool, error) {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
-	if _, exists := t.data[key]; !exists {
+func (t *TableImpl) Insert(keyTable any, value Value) (bool, error) {
+	t.checker()
+	if _, exists := t.DataTable[keyTable]; exists {
+		return false, errors.New("Такой ключ существует! Добавление невозможно")
+	}
+
+	t.DataTable[keyTable] = value
+	return true, nil
+}
+
+func (t *TableImpl) Update(keyTable any, value Value) (bool, error) {
+	t.checker()
+	if _, exists := t.DataTable[keyTable]; !exists {
 		return false, errors.New("Такого ключа не существует! Редактирование невозможно")
 	}
 
-	t.data[key] = value
+	t.DataTable[keyTable] = value
 	return true, nil
 }
 
-func (t *TableImpl) Get(key any) (Value, error) {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
-
-	value, exists := t.data[key]
+func (t *TableImpl) Get(keyTable any) (Value, error) {
+	t.checker()
+	value, exists := t.DataTable[keyTable]
 	if !exists {
-		return Value{}, errors.New("Ключа не существует!")
+		return Value{}, errors.New("Ключа не существует")
 	}
 
-	if time.Now().After(value.ttl) {
-		t.Mu.RUnlock()
-		t.Mu.Lock()
-		delete(t.data, key)
-		t.Mu.Unlock()
-		t.Mu.RLock()
+	if time.Now().After(value.Ttl) {
+		delete(t.DataTable, keyTable)
 		return Value{}, errors.New("Ключ был удален")
 	}
 
@@ -81,7 +78,22 @@ func (t *TableImpl) Get(key any) (Value, error) {
 }
 
 func (t *TableImpl) Size() int {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
-	return len(t.data)
+	return len(t.DataTable)
+}
+
+func parseTime(dateStr string) (time.Time, error) {
+	if dateStr == "" {
+		return time.Now().Add(5 * time.Minute).Truncate(time.Second), nil
+	}
+	parsedTime, err := time.Parse("02.01.2006T15:04:05", dateStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("time.Parse: %w", err)
+	}
+	return parsedTime, nil
+}
+
+func (t *TableImpl) checker() {
+	if t.DataTable == nil {
+		t.DataTable = make(map[any]Value)
+	}
 }

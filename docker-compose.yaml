@@ -1,0 +1,36 @@
+services:
+  app1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - MYPEER=app1
+      - PORT=8000
+      - PEER1=app2:8001
+      - PEER2=app3:8002
+
+  app2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - MYPEER=app2
+      - PORT=8001
+      - PEER1=app1:8000
+      - PEER2=app3:8002
+
+  app3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - MYPEER=app3
+      - PORT=8002
+      - PEER1=app1:8000
+      - PEER2=app2:8001
